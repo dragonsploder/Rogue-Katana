@@ -11,7 +11,8 @@
 /*                                                                                                         */
 /*---- Include Files --------------------------------------------------------------------------------------*/
 #include <stdlib.h>          /* General functions                                                          */
-#include <time.h>            /* Functions for  date and time                                               */
+#include <time.h>            /* Functions for date and time                                                */
+#include <string.h>          /* Functions for string manipulation                                          */
 #include <pdcurses/curses.h> /* Libraray for terminal manipulation                                         */
 #include "Katana.h"          /* Katana variables, arrays and structures                                    */
 /*---- Main Function --------------------------------------------------------------------------------------*/
@@ -26,6 +27,14 @@ int main(){
     struct Katana katanaTest;
     genKatana(&katanaTest);
 
+    printKatana(katanaTest, 0);
+    genKatana(&katanaTest);
+    printKatana(katanaTest, 1);
+    genKatana(&katanaTest);
+    printKatana(katanaTest, 2);
+    genKatana(&katanaTest);
+    printKatana(katanaTest, 3);
+
 
 
     myGetch();
@@ -37,10 +46,12 @@ int main(){
 /* Generators */
 
 void genKatana(struct Katana *katana) {
-    katana->damageType = (rand() % 4) + 1;
+    strcpy(katana->name, "test");
+
+    katana->katanaType = (rand() % 4);
     katana->damageAmount = dice(4, 3);
 
-    katana->movementType = (rand() % 4) + 1;
+    katana->movementType = (rand() % 4);
 
     katana->hitChance = dice(5, 20);
 };
@@ -58,8 +69,15 @@ int dice(int number, int sides) {
     return total;
 }
 
+void printError(char *message, char *file, int line){
+    stopCurses();
+    printf("In file: %s, line: %i\n", file, line);
+    printf("   Error: %s\n", message);
+    exit(-1);
+}
 
-/* Curses Functions */
+
+/* Curses IO Functions */
 
 
 void initColor(){
@@ -143,4 +161,74 @@ void printBoarder(){
     mvprintw(0, SCREEN_WIDTH, "+");
     mvprintw(SCREEN_HEIGHT, 0, "+");
     mvprintw(SCREEN_HEIGHT, SCREEN_WIDTH, "+");
+}
+
+
+void printKatana(struct Katana katana, int position) {
+    int katanaInfoBoxHeight = (SCREEN_HEIGHT / 3) - 2;
+    int katanaInfoBoxWidth = (SCREEN_WIDTH / 2) - 2;
+
+    struct Vec2 topRightCorner = {0, 0};
+    struct Vec2 topLeftCorner = {0, 0};
+    struct Vec2 bottomRightCorner = {0, 0};
+    struct Vec2 bottomLeftCorner = {0, 0};
+    
+    switch(position) { 
+        case 0:
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 2;
+            topRightCorner.x = 1;
+            break;
+        case 1:
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 2;
+            topRightCorner.x = (SCREEN_WIDTH - 1) - katanaInfoBoxWidth;
+            break;
+        case 2:
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 3 + katanaInfoBoxHeight;
+            topRightCorner.x = 1;
+            break;
+        case 3:
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 3 + katanaInfoBoxHeight;
+            topRightCorner.x = (SCREEN_WIDTH - 1) - katanaInfoBoxWidth;
+            break;
+        default:
+            ERROR("Invalid position argument");
+    }
+
+    topLeftCorner.y = topRightCorner.y;
+    topLeftCorner.x = topRightCorner.x + katanaInfoBoxWidth;
+
+    bottomRightCorner.y = topRightCorner.y + katanaInfoBoxHeight;
+    bottomRightCorner.x = topRightCorner.x;
+
+    bottomLeftCorner.y = topRightCorner.y + katanaInfoBoxHeight;
+    bottomLeftCorner.x = topRightCorner.x + katanaInfoBoxWidth;
+
+    
+    printVerticalLine(topRightCorner.x, topRightCorner.y, bottomRightCorner.y, "|");
+    printVerticalLine(topLeftCorner.x, topRightCorner.y, bottomRightCorner.y, "|");
+
+    printHorizontalLine(topRightCorner.y, topRightCorner.x, topLeftCorner.x, "-");
+    printHorizontalLine(bottomLeftCorner.y, topRightCorner.x, topLeftCorner.x, "-");
+
+    
+    mvprintw(topRightCorner.y, topRightCorner.x, &katanaCornerIcon[katana.katanaType][0]);
+    mvprintw(topLeftCorner.y, topLeftCorner.x, &katanaCornerIcon[katana.katanaType][0]);
+    mvprintw(bottomRightCorner.y, bottomRightCorner.x, &katanaCornerIcon[katana.katanaType][0]);
+    mvprintw(bottomLeftCorner.y, bottomLeftCorner.x, &katanaCornerIcon[katana.katanaType][0]);
+
+    char buffer[katanaInfoBoxWidth - 2];
+
+    
+    mvprintw(topRightCorner.y + 1, (topRightCorner.x + (katanaInfoBoxWidth/2)) - (strlen(katana.name)/2), katana.name);
+
+    sprintf(buffer,"Dammage: %i", katana.damageAmount);
+    mvprintw(topRightCorner.y + 3, (topRightCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
+
+    sprintf(buffer, "Hit Chance: %i", katana.hitChance);
+    mvprintw(topRightCorner.y + 4, (topRightCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
+
+    sprintf(buffer, "Movement Type: %s", katanaMovementTypeNames[katana.movementType]);
+    mvprintw(topRightCorner.y + 5, (topRightCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
+    
+    
 }
