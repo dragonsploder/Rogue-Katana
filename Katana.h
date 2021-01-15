@@ -37,12 +37,14 @@
 #undef KEY_ENTER
 #define KEY_ENTER 10
 
-#define NUMBER_OF_KATANA_TYPES 4
+#define NUMBER_OF_KATANA_TYPES 6
 
 #define KATANA_FIRE         1
 #define KATANA_ICE          2
-#define KATANA_LIGHTNING    3
-#define KATANA_POSION       4
+#define KATANA_WIND         3
+#define KATANA_STONE        4
+#define KATANA_LIGHTNING    5
+#define KATANA_POSION       6
 
 #define NUMBER_OF_MOVEMENT_TYPES 4
 
@@ -52,6 +54,8 @@
 #define MOVEMENT_RAND       4
 
 
+#define KATANA_MAX_DAMAGE 12
+
 
 struct Vec2 {
     int x;
@@ -59,7 +63,7 @@ struct Vec2 {
 };
 
 struct Katana {
-    char name[10];
+    char name[30];
     int katanaType;
     int damageAmount;
 
@@ -95,10 +99,12 @@ struct Tile {
 
 
 const char katanaCornerIcon[NUMBER_OF_KATANA_TYPES][2] = {
-    "*",
-    "+",
-    "^",
-    "~"
+    "*", /* Fire      */
+    "+", /* Ice       */
+    "=", /* Wind      */
+    "o", /* Stone     */
+    "^", /* Lightning */
+    "~"  /* Posion    */
 };
 
 const char katanaMovementTypeNames[NUMBER_OF_MOVEMENT_TYPES][10] = {
@@ -108,6 +114,29 @@ const char katanaMovementTypeNames[NUMBER_OF_MOVEMENT_TYPES][10] = {
     "Random"
 };
 
+const char katanaNameType[NUMBER_OF_KATANA_TYPES][10] = {
+    "Hi",      /* Fire      */
+    "Kori",    /* Ice       */
+    "Kaze",    /* Wind      */
+    "Iwa",     /* Stone     */
+    "Inazuma", /* Lightning */
+    "Doku"     /* Posion    */
+};
+
+const char katanaNameDamage[KATANA_MAX_DAMAGE][10] = {
+    "usagi",   /* Rabbit  */
+    "kaeru",   /* Frog    */
+    "sakana",  /* Fish    */
+    "tori",    /* Bird    */
+    "neko",    /* Cat     */
+    "inu",     /* Dog     */
+    "buta",    /* Hog     */
+    "hebi",    /* Serpent */
+    "uma",     /* Horse   */
+    "unagi",   /* Eel     */
+    "bura",    /* Bull    */
+    "kitsune"  /* Fox     */
+};
 
 /*==== Forward Function Decleration =======================================================================*/
 int main         (void);                                             /* Main function                      */

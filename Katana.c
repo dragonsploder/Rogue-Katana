@@ -46,14 +46,16 @@ int main(){
 /* Generators */
 
 void genKatana(struct Katana *katana) {
-    strcpy(katana->name, "test");
+    katana->katanaType = (rand() % NUMBER_OF_KATANA_TYPES);
+    /* 1 - 12 */
+    katana->damageAmount = dice(3, 4) + 1;
 
-    katana->katanaType = (rand() % 4);
-    katana->damageAmount = dice(4, 3);
+    katana->movementType = (rand() % NUMBER_OF_MOVEMENT_TYPES);
 
-    katana->movementType = (rand() % 4);
+    /* 20 - 100 */
+    katana->hitChance = dice(4, 20) + 20;
 
-    katana->hitChance = dice(5, 20);
+    sprintf(katana->name, "%s%s", katanaNameType[katana->katanaType], katanaNameDamage[katana->damageAmount - 1]);
 };
 
 
@@ -61,6 +63,7 @@ void genKatana(struct Katana *katana) {
 
 /* Utility Functions */
 int dice(int number, int sides) {
+    sides++;
     int total = 0;
     for (int i = 0; i < number; i++) {
         total += (rand() % sides);
