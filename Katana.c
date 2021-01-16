@@ -13,6 +13,7 @@
 #include <stdlib.h>          /* General functions                                                          */
 #include <time.h>            /* Functions for date and time                                                */
 #include <string.h>          /* Functions for string manipulation                                          */
+#include <math.h>            /* General math functions                                                     */
 #include <pdcurses/curses.h> /* Libraray for terminal manipulation                                         */
 #include "Katana.h"          /* Katana variables, arrays and structures                                    */
 /*---- Main Function --------------------------------------------------------------------------------------*/
@@ -35,6 +36,9 @@ int main(){
     genKatana(&katanaTest);
     printKatana(katanaTest, 3);
 
+    genMap();
+    printMap();
+
 
 
     myGetch();
@@ -56,7 +60,28 @@ void genKatana(struct Katana *katana) {
     katana->hitChance = dice(4, 20) + 20;
 
     sprintf(katana->name, "%s%s", katanaNameType[katana->katanaType], katanaNameDamage[katana->damageAmount - 1]);
-};
+}
+
+void genMap() {
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            map[y][x].type = TERRAIN_DIRT;
+        }
+    }
+    /*for (int i = 0; i < 1; i++) {
+        terrainAreaMap(rand() % NUMBER_OF_TERRAIN_TYPES, (struct Vec2) {rand() % MAP_HEIGHT, rand() % MAP_WIDTH}, (rand() % 3) + 3);
+    }*/
+}
+
+void terrainAreaMap(int terrain, struct Vec2 location, int radius) {
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            if ( sqrt(pow(y - location.y, 2)) + pow(x - location.x, 2) < radius) {
+                map[y][x].type = terrain;
+            }
+        }
+    }
+}
 
 
 
@@ -154,16 +179,21 @@ void printBox(int y, int x, int stopY, int stopX, char* toPrint){
 
 
 void printBoarder(){
-    printVerticalLine(0, 0, SCREEN_HEIGHT, "|");
-    printVerticalLine(SCREEN_WIDTH, 0, SCREEN_HEIGHT, "|");
+    printVerticalLine(0, 0, SCREEN_HEIGHT - 1, "|");
+    printVerticalLine(SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1, "|");
 
-    printHorizontalLine(0, 0, SCREEN_WIDTH, "-");
-    printHorizontalLine(SCREEN_HEIGHT, 0, SCREEN_WIDTH, "-");
+    printHorizontalLine(0, 0, SCREEN_WIDTH - 1, "-");
+    printHorizontalLine(SCREEN_HEIGHT / 3, 0,  SCREEN_WIDTH - 1, "-");
+    printHorizontalLine(SCREEN_HEIGHT - 1, 0, SCREEN_WIDTH - 1, "-");
 
     mvprintw(0, 0, "+");
-    mvprintw(0, SCREEN_WIDTH, "+");
-    mvprintw(SCREEN_HEIGHT, 0, "+");
-    mvprintw(SCREEN_HEIGHT, SCREEN_WIDTH, "+");
+    mvprintw(0, SCREEN_WIDTH - 1, "+");
+
+    mvprintw(SCREEN_HEIGHT / 3, 0, "+");
+    mvprintw(SCREEN_HEIGHT / 3, SCREEN_WIDTH - 1, "+");
+
+    mvprintw(SCREEN_HEIGHT - 1, 0, "+");
+    mvprintw(SCREEN_HEIGHT - 1, SCREEN_WIDTH - 1, "+");
 }
 
 
@@ -178,20 +208,20 @@ void printKatana(struct Katana katana, int position) {
     
     switch(position) { 
         case 0:
-            topRightCorner.y = (SCREEN_HEIGHT / 3) + 2;
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 1;
             topRightCorner.x = 1;
             break;
         case 1:
-            topRightCorner.y = (SCREEN_HEIGHT / 3) + 2;
-            topRightCorner.x = (SCREEN_WIDTH - 1) - katanaInfoBoxWidth;
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 1;
+            topRightCorner.x = (SCREEN_WIDTH - 2) - katanaInfoBoxWidth;
             break;
         case 2:
-            topRightCorner.y = (SCREEN_HEIGHT / 3) + 3 + katanaInfoBoxHeight;
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 2 + katanaInfoBoxHeight;
             topRightCorner.x = 1;
             break;
         case 3:
-            topRightCorner.y = (SCREEN_HEIGHT / 3) + 3 + katanaInfoBoxHeight;
-            topRightCorner.x = (SCREEN_WIDTH - 1) - katanaInfoBoxWidth;
+            topRightCorner.y = (SCREEN_HEIGHT / 3) + 2 + katanaInfoBoxHeight;
+            topRightCorner.x = (SCREEN_WIDTH - 2) - katanaInfoBoxWidth;
             break;
         default:
             ERROR("Invalid position argument");
@@ -234,4 +264,12 @@ void printKatana(struct Katana katana, int position) {
     mvprintw(topRightCorner.y + 5, (topRightCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
     
     
+}
+
+void printMap() {
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            mvprintw(y + 1, x + 1, terrainIcon[map[y][x].type]);
+        }
+    }
 }

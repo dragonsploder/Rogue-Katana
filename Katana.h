@@ -16,8 +16,12 @@
 #define ERROR(x) printError(#x,__FILE__, __LINE__)
 
 /* Screen laylout def */
-#define SCREEN_WIDTH 80
 #define SCREEN_HEIGHT 24
+#define SCREEN_WIDTH 80
+
+
+#define MAP_HEIGHT (SCREEN_HEIGHT/3) - 1
+#define MAP_WIDTH (SCREEN_WIDTH - 2)
 
 
 // Uncomment if using VS code cmd terminal
@@ -39,27 +43,35 @@
 
 #define NUMBER_OF_KATANA_TYPES 6
 
-#define KATANA_FIRE         1
-#define KATANA_ICE          2
-#define KATANA_WIND         3
-#define KATANA_STONE        4
-#define KATANA_LIGHTNING    5
-#define KATANA_POSION       6
+#define KATANA_FIRE      1
+#define KATANA_ICE       2
+#define KATANA_WIND      3
+#define KATANA_STONE     4
+#define KATANA_LIGHTNING 5
+#define KATANA_POSION    6
 
 #define NUMBER_OF_MOVEMENT_TYPES 4
 
-#define MOVEMENT_ATTACK     1
-#define MOVEMENT_RETREAT    2
-#define MOVEMENT_WAIT       3
-#define MOVEMENT_RAND       4
+#define MOVEMENT_ATTACK  1
+#define MOVEMENT_RETREAT 2
+#define MOVEMENT_WAIT    3
+#define MOVEMENT_RAND    4
+
+
+#define NUMBER_OF_TERRAIN_TYPES 4
+
+#define TERRAIN_DIRT  0
+#define TERRAIN_WATER 1
+#define TERRAIN_ROCK  2
+#define TERRAIN_MAGMA 3
 
 
 #define KATANA_MAX_DAMAGE 12
 
 
 struct Vec2 {
-    int x;
     int y;
+    int x;
 };
 
 struct Katana {
@@ -88,14 +100,24 @@ struct Enemy {
 
     struct Vec2 location;
 
-    char icon;
 
 };
 
 struct Tile {
     int type;
-    char icon;
 };
+
+/* Global Definitions */
+
+struct Tile map[MAP_HEIGHT][MAP_WIDTH];
+
+const char terrainIcon[NUMBER_OF_TERRAIN_TYPES][2] = {
+    ".", /* Dirt  */
+    "~", /* Water */
+    "*", /* Rock  */
+    "^", /* Magma */
+};
+
 
 
 const char katanaCornerIcon[NUMBER_OF_KATANA_TYPES][2] = {
@@ -142,6 +164,8 @@ const char katanaNameDamage[KATANA_MAX_DAMAGE][10] = {
 int main         (void);                                             /* Main function                      */
 /*---- Generator Functions --------------------------------------------------------------------------------*/
 void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
+void genMap();                                                       /* Generate random terrain for map    */
+void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
 /*---- Utility Functions ----------------------------------------------------------------------------------*/
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
 void printError(char* message, char* file, int line);                /* Error function used by ERROR()     */
@@ -157,4 +181,5 @@ void printVerticalLine(int x, int start, int stop, char* toPrint);   /* Print ve
 void printBox(int y, int x, int stopY, int stopX, char* toPrint);    /* Print a filled in box              */ 
 void printBoarder();                                                 /* Print boarder around screen        */
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */
+void printMap();                                                     /* Print map at top of screen         */
 /*---- End of File ----------------------------------------------------------------------------------------*/
