@@ -11,6 +11,7 @@
 /*                                                                                                         */
 /*---- Include Files --------------------------------------------------------------------------------------*/
 #include <stdlib.h>          /* General functions                                                          */
+#include <stdbool.h>         /* Definitions for bool type                                                  */
 #include <time.h>            /* Functions for date and time                                                */
 #include <string.h>          /* Functions for string manipulation                                          */
 #include <math.h>            /* General math functions                                                     */
@@ -18,36 +19,91 @@
 #include "Katana.h"          /* Katana variables, arrays and structures                                    */
 /*---- Main Function --------------------------------------------------------------------------------------*/
 
-int main(){
+
+void main(){
     long seed = time(NULL);
     srand(seed);
 
     initCurses();
     printBoarder();
 
-    struct Katana katanaTest;
-    genKatana(&katanaTest);
-
-    printKatana(katanaTest, 0);
-    genKatana(&katanaTest);
-    printKatana(katanaTest, 1);
-    genKatana(&katanaTest);
-    printKatana(katanaTest, 2);
-    genKatana(&katanaTest);
-    printKatana(katanaTest, 3);
 
     genMap();
     printMap();
 
+    genMap(); 
 
 
-    myGetch();
+    strcpy(player.name, "Test");
+    player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
+    player.health = 100;
+    genKatana(&player.katanas[0]);
+    genKatana(&player.katanas[1]);
+    genKatana(&player.katanas[2]);
+    genKatana(&player.katanas[3]);
+
+    genEnemy();
+    genEnemy();
+    genEnemy();
+
+    gameLoop();
 
     stopCurses();
 }
 
+void gameLoop() {
+    int command = 0;
+
+
+    do {
+        printBoarder();
+        printMap();
+        for (int i = 0; i < 4; i++) {
+            printKatana(player.katanas[i], i);
+        }
+        //printEntities();
+
+
+
+
+
+        command = myGetch();
+    } while (command != 'q');
+}
+
 
 /* Generators */
+
+void genEnemy() {
+    if (currentNumberOfEnemies < MAX_NUMBER_OF_ENEMIES) {
+        struct Vec2 location = (struct Vec2) {0, 0};
+        do {
+            switch (rand() % 4) {
+                case 0: /* Right */
+                    location.y = rand() % MAP_HEIGHT;
+                    location.x = 0;
+                    break;
+                case 1: /* Left */
+                    location.y = rand() % MAP_HEIGHT;
+                    location.x = MAP_WIDTH - 1;
+                    break;
+                case 2: /* Top */
+                    location.y = 0;
+                    location.x = rand() % MAP_WIDTH;
+                    break;
+                case 3: /* Bottom */
+                    location.y = MAP_HEIGHT - 1;
+                    location.x = rand() % MAP_WIDTH;
+                    break;
+                default:
+                    ERROR("Rand has failed me");
+            }
+        } while (checkForEnemy(location) != 0);
+
+        enemies[currentNumberOfEnemies] = (struct Enemy) {rand() % NUMBER_OF_ENEMY_TYPES, 10, 10, location};
+        currentNumberOfEnemies++;
+    }
+}
 
 void genKatana(struct Katana *katana) {
     katana->katanaType = (rand() % NUMBER_OF_KATANA_TYPES);
@@ -68,19 +124,29 @@ void genMap() {
             map[y][x].type = TERRAIN_DIRT;
         }
     }
-    /*for (int i = 0; i < 1; i++) {
-        terrainAreaMap(rand() % NUMBER_OF_TERRAIN_TYPES, (struct Vec2) {rand() % MAP_HEIGHT, rand() % MAP_WIDTH}, (rand() % 3) + 3);
-    }*/
+    for (int i = 0; i < 15; i++) {
+        terrainAreaMap((rand() % (NUMBER_OF_TERRAIN_TYPES - 1)) + 1, (struct Vec2) {rand() % MAP_HEIGHT, rand() % MAP_WIDTH}, (rand() % 5) + 2);
+    }
 }
 
 void terrainAreaMap(int terrain, struct Vec2 location, int radius) {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            if ( sqrt(pow(y - location.y, 2)) + pow(x - location.x, 2) < radius) {
+            if ( sqrt(pow(y - location.y, 2)) + (pow(x - location.x, 2)/10) <= radius) {
                 map[y][x].type = terrain;
             }
         }
     }
+}
+
+/* Misc Functions */
+bool checkForEnemy(struct Vec2 location) {
+    for (int i = 0; i < currentNumberOfEnemies; i++) {
+        if (enemies[i].location.y == location.y && enemies[i].location.x == location.x) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 
@@ -147,7 +213,7 @@ void stopCurses(){
 }
 
 
-wchar_t myGetch(){
+int myGetch(){
     return getch();
 }
 
@@ -272,4 +338,13 @@ void printMap() {
             mvprintw(y + 1, x + 1, terrainIcon[map[y][x].type]);
         }
     }
+}
+
+void printEntities(){
+    for (int i = 0; i < currentNumberOfEnemies; i++) {
+        enemies[i].location;
+        mvprintw(enemies[i].location.y + 1, enemies[i].location.x + 1, enemyIcon[enemies[i].type]);
+    }
+
+    mvprintw(player.location.y + 1, player.location.x + 1, "@");
 }

@@ -20,7 +20,7 @@
 #define SCREEN_WIDTH 80
 
 
-#define MAP_HEIGHT (SCREEN_HEIGHT/3) - 1
+#define MAP_HEIGHT (SCREEN_HEIGHT/3 - 1)
 #define MAP_WIDTH (SCREEN_WIDTH - 2)
 
 
@@ -65,8 +65,18 @@
 #define TERRAIN_ROCK  2
 #define TERRAIN_MAGMA 3
 
+#define NUMBER_OF_ENEMY_TYPES 4
+
+#define ENEMY_BASIC  0
+#define ENEMY_ENERGY  1 /* Fire & Lightning resistant */
+#define ENEMY_STRONG  2 /* Stone & Wind resistant */
+#define ENEMY_FLUID   3 /* Ice and Posion resistant */
+
+
 
 #define KATANA_MAX_DAMAGE 12
+
+#define MAX_NUMBER_OF_ENEMIES 20
 
 
 struct Vec2 {
@@ -95,6 +105,7 @@ struct Player {
 };
 
 struct Enemy {
+    int type;
     int health;
     int power;
 
@@ -109,15 +120,27 @@ struct Tile {
 
 /* Global Definitions */
 
+struct Player player;
+
+int currentNumberOfEnemies;
+struct Enemy enemies[MAX_NUMBER_OF_ENEMIES];
+
+
 struct Tile map[MAP_HEIGHT][MAP_WIDTH];
 
 const char terrainIcon[NUMBER_OF_TERRAIN_TYPES][2] = {
     ".", /* Dirt  */
     "~", /* Water */
     "*", /* Rock  */
-    "^", /* Magma */
+    "^"  /* Magma */
 };
 
+const char enemyIcon[NUMBER_OF_ENEMY_TYPES][2] = {
+    "B", /* Basic  */
+    "E", /* Energy */
+    "S", /* Strong */
+    "F"  /* Fluid  */
+};
 
 
 const char katanaCornerIcon[NUMBER_OF_KATANA_TYPES][2] = {
@@ -161,11 +184,15 @@ const char katanaNameDamage[KATANA_MAX_DAMAGE][10] = {
 };
 
 /*==== Forward Function Decleration =======================================================================*/
-int main         (void);                                             /* Main function                      */
+void main();                                                         /* Main function                      */
+void gameLoop();                                                     /* Game loop which runs every turn    */
 /*---- Generator Functions --------------------------------------------------------------------------------*/
+void genEnemy();                                                     /* Generate a random enemy            */
 void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
+/*---- Misc Functions -------------------------------------------------------------------------------------*/
+bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
 /*---- Utility Functions ----------------------------------------------------------------------------------*/
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
 void printError(char* message, char* file, int line);                /* Error function used by ERROR()     */
@@ -174,7 +201,7 @@ void printError(char* message, char* file, int line);                /* Error fu
 void initCurses();                                                   /* Initalise Curses library           */
 void initColor();                                                    /* Initalise color for Curses         */
 void stopCurses();                                                   /* Stop Curses library                */
-wchar_t myGetch();                                                   /* Get keystroke                      */
+int  myGetch();                                                      /* Get keystroke                      */
 void clearScreen();                                                  /* Clear screen                       */ 
 void printHorizontalLine(int y, int start, int stop, char* toPrint); /* Print horizontal line              */ 
 void printVerticalLine(int x, int start, int stop, char* toPrint);   /* Print vertical line                */ 
@@ -182,4 +209,5 @@ void printBox(int y, int x, int stopY, int stopX, char* toPrint);    /* Print a 
 void printBoarder();                                                 /* Print boarder around screen        */
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */
 void printMap();                                                     /* Print map at top of screen         */
+void printEntities();                                                /* Print player and enemies           */
 /*---- End of File ----------------------------------------------------------------------------------------*/
