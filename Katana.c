@@ -24,6 +24,8 @@ void main(){
     long seed = time(NULL);
     srand(seed);
 
+    gameData.turn = 0;
+
     initCurses();
     printBoarder();
 
@@ -53,9 +55,14 @@ void main(){
 
 void gameLoop() {
     int command = 0;
-    int selectedKatana = -1;
+    int selectedKatana;
+
+    bool validMove;
 
     do {
+        selectedKatana = -1;
+        validMove = true;
+        
         switch (command) {
             case TOP_LEFT_KATANA: {
                 selectedKatana = 0;
@@ -75,12 +82,20 @@ void gameLoop() {
             }
             
             default: {
-                selectedKatana = -1;
+                validMove = false;
             }
         }
 
-        if (selectedKatana != -1) {
-            playerMove(player.katanas[selectedKatana]);
+        if (validMove) {
+            if (selectedKatana != -1) {
+                playerMove(player.katanas[selectedKatana]);
+            }
+
+            for (int i = 0; i < currentNumberOfEnemies; i++) {
+                enemyMovemet(i);
+            }
+
+            gameData.turn++;
         }
 
 
@@ -91,20 +106,12 @@ void gameLoop() {
         }
         printEntities();
 
+
         command = myGetch();
     } while (command != 'q');
 }
 
 /* Movement */
-
-/*
-#define MOVEMENT_STRIKE   1 // Move to strongest enemy                        
-#define MOVEMENT_BERSERK  2 // Move to the closest enemy                      
-#define MOVEMENT_RETREAT  3 // Move away from most enemies                    
-#define MOVEMENT_RETURN   4 // Attempt to move to terrain maching katana type 
-#define MOVEMENT_DEFEND   5 // Don't move                                     
-#define MOVEMENT_RAND     6 // Move in random newLocation                       
-*/
 
 void playerMove(struct Katana katana) {
     struct Vec2 newLocation;
@@ -219,16 +226,34 @@ void playerMove(struct Katana katana) {
     player.location = newLocation;
 }
 
+void enemyMovemet(int enemyIndex) {
+    struct Enemy* currentEnemy = &enemies[enemyIndex];
+
+    if (gameData.turn - currentEnemy->lastMovementTurn >= currentEnemy->speed) {
+        struct Vec2 newLocation;
+        
+        newLocation = pathFinding(currentEnemy->location, player.location);
+
+        currentEnemy->location = newLocation;
+
+        currentEnemy->lastMovementTurn = gameData.turn;
+    }
+}
+
 
 /* Generators */
 
 void genEnemy() {
     if (currentNumberOfEnemies < MAX_NUMBER_OF_ENEMIES) {
-        enemies[currentNumberOfEnemies].type = rand() % NUMBER_OF_ENEMY_TYPES;
+        struct Enemy *currentEnemy = &enemies[currentNumberOfEnemies];
 
-        enemies[currentNumberOfEnemies].health = dice(2, 5);
-        enemies[currentNumberOfEnemies].power = dice(2, 5);
-        enemies[currentNumberOfEnemies].level = enemies[currentNumberOfEnemies].health * enemies[currentNumberOfEnemies].power;
+        currentEnemy->type = rand() % NUMBER_OF_ENEMY_TYPES;
+
+        currentEnemy->speed = abs(dice(3, 4) - 6);
+
+        currentEnemy->health = dice(2, 5);
+        currentEnemy->power = dice(2, 5);
+        currentEnemy->level = enemies[currentNumberOfEnemies].health * enemies[currentNumberOfEnemies].power;
 
 
         struct Vec2 location = (struct Vec2) {0, 0};
@@ -260,7 +285,7 @@ void genEnemy() {
             }
         } while (checkForEnemy(location) != 0);
 
-        enemies[currentNumberOfEnemies].location = location;
+        currentEnemy->location = location;
         currentNumberOfEnemies++;
     }
 }
@@ -309,9 +334,6 @@ bool checkForEnemy(struct Vec2 location) {
     return 0;
 }
 
-
-
-
 /* Utility Functions */
 int dice(int number, int sides) {
     sides++;
@@ -350,16 +372,20 @@ double findDistanceToClosestEnemy(struct Vec2 location) {
 struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end) {
     struct Vec2 step = start;
 
-    if (end.y > start.y) {
-        step.y += 1;
-    } else if (end.y < start.y) {
-        step.y -= 1;
+    if (abs(end.x - start.x) < MAP_HEIGHT) {
+        if (end.y > start.y) {
+            step.y += 1;
+        } else if (end.y < start.y) {
+            step.y -= 1;
+        }
     }
 
-    if (end.x > start.x) {
-        step.x += 1;
-    } else if (end.x < start.x) {
-        step.x -= 1;
+    if (abs(end.y - start.y) < MAP_WIDTH) {
+        if (end.x > start.x) {
+            step.x += 1;
+        } else if (end.x < start.x) {
+            step.x -= 1;
+        }
     }
 
     if ((step.y < 0 || step.y > MAP_HEIGHT) || (step.x < 0 || step.x > MAP_WIDTH)) {

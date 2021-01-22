@@ -116,8 +116,13 @@ struct Enemy {
     int type;
     int health;
     int power;
+    int speed; /* 1:normal - 6:slow */
+
     int level; /* health * power */
 
+
+
+    int lastMovementTurn;
     struct Vec2 location;
 
 
@@ -125,6 +130,10 @@ struct Enemy {
 
 struct Tile {
     int type;
+};
+
+struct GameData {
+    int turn;
 };
 
 /* Global Definitions */
@@ -136,6 +145,11 @@ struct Enemy enemies[MAX_NUMBER_OF_ENEMIES];
 
 
 struct Tile map[MAP_HEIGHT][MAP_WIDTH];
+
+struct GameData gameData;
+
+
+
 
 const char terrainIcon[NUMBER_OF_TERRAIN_TYPES][2] = {
     ".", /* Dirt  */
@@ -208,6 +222,7 @@ void main();                                                         /* Main fun
 void gameLoop();                                                     /* Game loop which runs every turn    */
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
 void playerMove(struct Katana katana);                               /* Moves the player                   */
+void enemyMovemet(int enemyIndex);                                   /* Moves an enemy                     */
 /*---- Generator Functions --------------------------------------------------------------------------------*/
 void genEnemy();                                                     /* Generate a random enemy            */
 void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
