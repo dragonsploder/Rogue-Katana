@@ -47,6 +47,9 @@
 #undef KEY_ENTER
 #define KEY_ENTER 10
 
+#define PLAYER_START_HEALTH 100
+
+
 #define NUMBER_OF_KATANA_TYPES 6
 
 #define KATANA_FIRE      0
@@ -60,7 +63,7 @@
 
 #define MOVEMENT_STRIKE   0 /* Move to strongest enemy                        */
 #define MOVEMENT_BERSERK  1 /* Move to the closest enemy                      */
-#define MOVEMENT_RETREAT  2 /* Move away from most enemies                    */
+#define MOVEMENT_RETREAT  2 /* Move away from the most enemies                */
 #define MOVEMENT_RETURN   3 /* Attempt to move to terrain maching katana type */
 #define MOVEMENT_DEFEND   4 /* Don't move                                     */
 #define MOVEMENT_RAND     5 /* Move in random direction                       */
@@ -95,12 +98,14 @@ struct Vec2 {
 struct Katana {
     char name[30];
     int katanaType;
-    int damageAmount;
+
+    /* 1 - 12 */
+    int damage;
+    /* 0 - 6 */
+    int damageMod;
 
     int movementType;
 
-    /* 1 - 100 */
-    int hitChance;
 };
 
 struct Player {
@@ -115,7 +120,7 @@ struct Player {
 struct Enemy {
     int type;
     int health;
-    int power;
+    int damage;
     int speed; /* 1:normal - 6:slow */
 
     int level; /* health * power */
@@ -133,20 +138,19 @@ struct Tile {
 };
 
 struct GameData {
+    struct Player player;
+
+    int currentNumberOfEnemies;
+    struct Enemy enemies[MAX_NUMBER_OF_ENEMIES];
+
+
+    struct Tile map[MAP_HEIGHT][MAP_WIDTH];
+
     int turn;
 };
 
 /* Global Definitions */
-
-struct Player player;
-
-int currentNumberOfEnemies;
-struct Enemy enemies[MAX_NUMBER_OF_ENEMIES];
-
-
-struct Tile map[MAP_HEIGHT][MAP_WIDTH];
-
-struct GameData gameData;
+struct GameData currentGameData;
 
 
 
@@ -220,22 +224,29 @@ const char katanaNameDamage[KATANA_MAX_DAMAGE][10] = {
 /*==== Forward Function Decleration =======================================================================*/
 void main();                                                         /* Main function                      */
 void gameLoop();                                                     /* Game loop which runs every turn    */
+/*---- Find Functions -------------------------------------------------------------------------------------*/
+double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance between two points        */
+double findDistanceToClosestEnemy(struct Vec2 location);             /* Function used in retreat movement  */
+struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end);         /* Find next step from start to end   */
+bool findNearbyEnemies(int (*enemies)[8], int *number);                   /* Find enemies adjacent to player    */
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
 void playerMove(struct Katana katana);                               /* Moves the player                   */
 void enemyMovemet(int enemyIndex);                                   /* Moves an enemy                     */
-/*---- Generator Functions --------------------------------------------------------------------------------*/
+/*---- Attacking Functions --------------------------------------------------------------------------------*/
+void attackEnemy(int enemyIndex, struct Katana katana);              /* Attack an enemy                    */
+void attackPlayer(int enemyIndex);                                   /* Attack the player                  */
+/*---- Generator & Destructor Functions -------------------------------------------------------------------*/
 void genEnemy();                                                     /* Generate a random enemy            */
+void removeEnemy(int enemyIndex);                                    /* Removes an enemy                   */
 void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
 /*---- Utility Functions ----------------------------------------------------------------------------------*/
+int myRand(int number);                                              /* Same as rand(), but works with 0   */
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
 void printError(char* message, char* file, int line);                /* Error function used by ERROR()     */
-double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance between two points        */
-double findDistanceToClosestEnemy(struct Vec2 location);             /* Function used in retreat movement  */
-struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end);         /* Find next step from start to end   */
 /*---- Miscellaneous Functions ----------------------------------------------------------------------------*/
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/
 void initCurses();                                                   /* Initalise Curses library           */

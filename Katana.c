@@ -24,7 +24,7 @@ void main(){
     long seed = time(NULL);
     srand(seed);
 
-    gameData.turn = 0;
+    currentGameData.turn = 0;
 
     initCurses();
     printBoarder();
@@ -36,17 +36,17 @@ void main(){
     genMap(); 
 
 
-    strcpy(player.name, "Test");
-    player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
-    player.health = 100;
-    genKatana(&player.katanas[0]);
-    genKatana(&player.katanas[1]);
-    genKatana(&player.katanas[2]);
-    genKatana(&player.katanas[3]);
+    strcpy(currentGameData.player.name, "Test");
+    currentGameData.player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
+    currentGameData.player.health = PLAYER_START_HEALTH;
+    genKatana(&currentGameData.player.katanas[0]);
+    genKatana(&currentGameData.player.katanas[1]);
+    genKatana(&currentGameData.player.katanas[2]);
+    genKatana(&currentGameData.player.katanas[3]);
 
-    genEnemy();
-    genEnemy();
-    genEnemy();
+    for (int i = 0; i < 10; i++) {
+        genEnemy();
+    }
 
     gameLoop();
 
@@ -85,30 +85,109 @@ void gameLoop() {
                 validMove = false;
             }
         }
-
+        
         if (validMove) {
             if (selectedKatana != -1) {
-                playerMove(player.katanas[selectedKatana]);
+                int nearByEnemies[8];
+                int number;
+                if (findNearbyEnemies(&nearByEnemies, &number)) {
+                    /* Right now attack lowest level enemy */
+                    int lowestLevelIndex = 0;
+                    int lowestLevel = 100;
+                    for (int i = 0; i < number; i++) {
+                        if (currentGameData.enemies[nearByEnemies[i]].level < lowestLevel) {
+                            lowestLevelIndex = i;
+                            lowestLevel = currentGameData.enemies[nearByEnemies[i]].level;
+                        }
+                    }
+                    attackEnemy(nearByEnemies[lowestLevelIndex], currentGameData.player.katanas[selectedKatana]);
+                } else {
+                    playerMove(currentGameData.player.katanas[selectedKatana]);
+                }
+            }
+            
+            
+            for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+                if (currentGameData.turn - currentGameData.enemies[i].lastMovementTurn >= currentGameData.enemies[i].speed) {
+                    if (findDistance(currentGameData.enemies[i].location, currentGameData.player.location) == 1) {
+                        attackPlayer(i);
+                    } else {
+                        enemyMovemet(i);
+                    }
+                }
             }
 
-            for (int i = 0; i < currentNumberOfEnemies; i++) {
-                enemyMovemet(i);
-            }
-
-            gameData.turn++;
+            currentGameData.turn++;
         }
 
 
         printBoarder();
         printMap();
         for (int i = 0; i < 4; i++) {
-            printKatana(player.katanas[i], i);
+            printKatana(currentGameData.player.katanas[i], i);
         }
         printEntities();
 
 
         command = myGetch();
-    } while (command != 'q');
+    } while (command != 'q' && currentGameData.player.health > 0);
+}
+
+/* Find functions */
+
+
+double findDistance(struct Vec2 start, struct Vec2 end) {
+    return fmax(abs(end.y - start.y), abs(end.x - start.x));
+}
+
+double findDistanceToClosestEnemy(struct Vec2 location) {
+    int closestEnemy = 0;
+    int closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
+    for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+        int currentEnemyDistance = findDistance(location, currentGameData.enemies[i].location);
+        if (currentEnemyDistance < closestEnemyDistance) {
+            closestEnemy = i;
+            closestEnemyDistance = currentEnemyDistance;
+        }
+    }
+    return closestEnemyDistance;
+}
+
+struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end) {
+    struct Vec2 step = start;
+
+    if (abs(end.x - start.x) < MAP_HEIGHT) {
+        if (end.y > start.y) {
+            step.y += 1;
+        } else if (end.y < start.y) {
+            step.y -= 1;
+        }
+    }
+
+    if (abs(end.y - start.y) < MAP_WIDTH) {
+        if (end.x > start.x) {
+            step.x += 1;
+        } else if (end.x < start.x) {
+            step.x -= 1;
+        }
+    }
+
+    if ((step.y < 0 || step.y > MAP_HEIGHT) || (step.x < 0 || step.x > MAP_WIDTH)) {
+        return start;
+    }
+
+    return step;
+}  
+
+bool findNearbyEnemies(int (*enemies)[8], int *number) {
+    *number = 0;
+    for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+        if (findDistance(currentGameData.player.location, currentGameData.enemies[i].location) == 1) {
+            (*enemies)[(*number)++] = i;
+        }
+    }
+
+    return (*number != 0);
 }
 
 /* Movement */
@@ -119,44 +198,44 @@ void playerMove(struct Katana katana) {
     switch (katana.movementType) {
         case MOVEMENT_STRIKE: {
             int strongestEnemy = 0;
-            for (int i = 0; i < currentNumberOfEnemies; i++) {
-                if (enemies[i].level > enemies[strongestEnemy].level) {
+            for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+                if (currentGameData.enemies[i].level > currentGameData.enemies[strongestEnemy].level) {
                     strongestEnemy = i;
                 }
             }
-            newLocation = pathFinding(player.location, enemies[strongestEnemy].location);
+            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[strongestEnemy].location);
             break;
         }
 
         case MOVEMENT_BERSERK: {
             int closestEnemy = 0;
             int closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
-            for (int i = 0; i < currentNumberOfEnemies; i++) {
-                int currentEnemyDistance = findDistance(player.location, enemies[i].location);
+            for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+                int currentEnemyDistance = findDistance(currentGameData.player.location, currentGameData.enemies[i].location);
                 if (currentEnemyDistance < closestEnemyDistance) {
                     closestEnemy = i;
                     closestEnemyDistance = currentEnemyDistance;
                 }
             }
-            newLocation = pathFinding(player.location, enemies[closestEnemy].location);
+            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[closestEnemy].location);
             break;
         }
         
         case MOVEMENT_RETREAT: { /* I can't think of a better way to do this */
             double distances[9];
-            distances[0] = findDistanceToClosestEnemy((struct Vec2) {player.location.y + 1, player.location.x + 1});
-            distances[1] = findDistanceToClosestEnemy((struct Vec2) {player.location.y + 1, player.location.x + 0});
-            distances[2] = findDistanceToClosestEnemy((struct Vec2) {player.location.y + 1, player.location.x - 1});
-            distances[3] = findDistanceToClosestEnemy((struct Vec2) {player.location.y + 0, player.location.x + 1});
-            distances[4] = findDistanceToClosestEnemy((struct Vec2) {player.location.y + 0, player.location.x + 0});
-            distances[5] = findDistanceToClosestEnemy((struct Vec2) {player.location.y + 0, player.location.x - 1});
-            distances[6] = findDistanceToClosestEnemy((struct Vec2) {player.location.y - 1, player.location.x + 1});
-            distances[7] = findDistanceToClosestEnemy((struct Vec2) {player.location.y - 1, player.location.x + 0});
-            distances[8] = findDistanceToClosestEnemy((struct Vec2) {player.location.y - 1, player.location.x - 1});
+            distances[0] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 1});
+            distances[1] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 0});
+            distances[2] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x - 1});
+            distances[3] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 1});
+            distances[4] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 0});
+            distances[5] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x - 1});
+            distances[6] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 1});
+            distances[7] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 0});
+            distances[8] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x - 1});
 
             int farthestDistanceIndex = 0;
             do {
-                newLocation = player.location;
+                newLocation = currentGameData.player.location;
                 
                 for (int i = 0; i < 9; i++) {
                     if (distances[i] > distances[farthestDistanceIndex]) {
@@ -190,8 +269,8 @@ void playerMove(struct Katana katana) {
             int closestTerrainDistance = MAP_HEIGHT + MAP_WIDTH;
             for (int y = 0; y < MAP_HEIGHT; y++) {
                 for (int x = 0; x < MAP_WIDTH; x++) {
-                    if (map[y][x].type == katanaToTerrain[katana.katanaType]) {
-                        int currentTerrainDistance = findDistance(player.location, (struct Vec2) {y, x});
+                    if (currentGameData.map[y][x].type == katanaToTerrain[katana.katanaType]) {
+                        int currentTerrainDistance = findDistance(currentGameData.player.location, (struct Vec2) {y, x});
                         if (currentTerrainDistance < closestTerrainDistance) {
                             closestTerrain = (struct Vec2) {y, x};
                             closestTerrainDistance = currentTerrainDistance;
@@ -199,21 +278,21 @@ void playerMove(struct Katana katana) {
                     }
                 }
             }
-            newLocation = pathFinding(player.location, closestTerrain);
+            newLocation = pathFinding(currentGameData.player.location, closestTerrain);
             break;
         }
         
         case MOVEMENT_DEFEND: {
-            newLocation = player.location;
+            newLocation = currentGameData.player.location;
             break;
         }
         
         case MOVEMENT_RAND: {
             do {
-                newLocation = player.location;
-                newLocation.y += (rand() % 3) - 1;
-                newLocation.x += (rand() % 3) - 1;
-            } while ((newLocation.y == player.location.y && newLocation.x == player.location.x) || ((newLocation.y < 0 || newLocation.y >= MAP_HEIGHT) || (newLocation.x < 0 || newLocation.x >= MAP_WIDTH)));
+                newLocation = currentGameData.player.location;
+                newLocation.y += myRand(3) - 1;
+                newLocation.x += myRand(3) - 1;
+            } while ((newLocation.y == currentGameData.player.location.y && newLocation.x == currentGameData.player.location.x) || ((newLocation.y < 0 || newLocation.y >= MAP_HEIGHT) || (newLocation.x < 0 || newLocation.x >= MAP_WIDTH)));
             break;
         }
 
@@ -223,94 +302,115 @@ void playerMove(struct Katana katana) {
         }
     }
 
-    player.location = newLocation;
+    currentGameData.player.location = newLocation;
 }
 
 void enemyMovemet(int enemyIndex) {
-    struct Enemy* currentEnemy = &enemies[enemyIndex];
+    struct Enemy* currentEnemy = &currentGameData.enemies[enemyIndex];
 
-    if (gameData.turn - currentEnemy->lastMovementTurn >= currentEnemy->speed) {
-        struct Vec2 newLocation;
-        
-        newLocation = pathFinding(currentEnemy->location, player.location);
+    struct Vec2 newLocation;
+    
+    newLocation = pathFinding(currentEnemy->location, currentGameData.player.location);
+    if (checkForEnemy(newLocation) == false) {
 
         currentEnemy->location = newLocation;
 
-        currentEnemy->lastMovementTurn = gameData.turn;
+        currentEnemy->lastMovementTurn = currentGameData.turn;
     }
 }
 
+/* Attacking */
 
-/* Generators */
+void attackEnemy(int enemyIndex, struct Katana katana) {
+    currentGameData.enemies[enemyIndex].health -= katana.damage + myRand(katana.damageMod);
+    if (currentGameData.enemies[enemyIndex].health <= 0) {
+        removeEnemy(enemyIndex);
+    }
+}
+
+void attackPlayer(int enemyIndex) {
+    currentGameData.player.health -= currentGameData.enemies[enemyIndex].damage;
+}
+
+
+/* Generators & Destructors */
 
 void genEnemy() {
-    if (currentNumberOfEnemies < MAX_NUMBER_OF_ENEMIES) {
-        struct Enemy *currentEnemy = &enemies[currentNumberOfEnemies];
+    if (currentGameData.currentNumberOfEnemies < MAX_NUMBER_OF_ENEMIES) {
+        struct Enemy *currentEnemy = &currentGameData.enemies[currentGameData.currentNumberOfEnemies];
 
-        currentEnemy->type = rand() % NUMBER_OF_ENEMY_TYPES;
+        currentEnemy->type = myRand(NUMBER_OF_ENEMY_TYPES);
 
         currentEnemy->speed = abs(dice(3, 4) - 6);
 
-        currentEnemy->health = dice(2, 5);
-        currentEnemy->power = dice(2, 5);
-        currentEnemy->level = enemies[currentNumberOfEnemies].health * enemies[currentNumberOfEnemies].power;
+        currentEnemy->health = dice(4, 5);
+        currentEnemy->damage = dice(2, 5);
+        currentEnemy->level = currentGameData.enemies[currentGameData.currentNumberOfEnemies].health * currentGameData.enemies[currentGameData.currentNumberOfEnemies].damage;
 
 
         struct Vec2 location = (struct Vec2) {0, 0};
         do {
-            switch (rand() % 4) {
+            switch (myRand(4)) {
                 case 0: {/* Right */
-                    location.y = rand() % MAP_HEIGHT;
+                    location.y = myRand(MAP_HEIGHT);
                     location.x = 0;
                     break;
                 }
                 case 1: {/* Left */
-                    location.y = rand() % MAP_HEIGHT;
+                    location.y = myRand(MAP_HEIGHT);
                     location.x = MAP_WIDTH - 1;
                     break;
                 }
                 case 2: {/* Top */
                     location.y = 0;
-                    location.x = rand() % MAP_WIDTH;
+                    location.x = myRand(MAP_WIDTH);
                     break;
                 }
                 case 3: {/* Bottom */
                     location.y = MAP_HEIGHT - 1;
-                    location.x = rand() % MAP_WIDTH;
+                    location.x = myRand(MAP_WIDTH);
                     break;
                 }
                 default: {
-                    ERROR("Rand has failed me");
+                    ERROR("myRand has failed me");
                 }
             }
         } while (checkForEnemy(location) != 0);
 
         currentEnemy->location = location;
-        currentNumberOfEnemies++;
+        currentGameData.currentNumberOfEnemies++;
     }
 }
 
+void removeEnemy(int enemyIndex) {
+    for (int i = enemyIndex; i < currentGameData.currentNumberOfEnemies - 1; i++) {
+        currentGameData.enemies[i] = currentGameData.enemies[i + 1];
+    }
+    currentGameData.currentNumberOfEnemies--;
+}
+
 void genKatana(struct Katana *katana) {
-    katana->katanaType = (rand() % NUMBER_OF_KATANA_TYPES);
+    katana->katanaType = myRand(NUMBER_OF_KATANA_TYPES);
+
     /* 1 - 12 */
-    katana->damageAmount = dice(3, 4) + 1;
+    katana->damage = dice(3, 4) + 1;
 
-    katana->movementType = (rand() % NUMBER_OF_MOVEMENT_TYPES);
+    /* 0 - 6 */
+    katana->damageMod = fmax(dice(4,3) - 6, 0);
 
-    /* 20 - 100 */
-    katana->hitChance = dice(4, 20) + 20;
+    katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
 
-    sprintf(katana->name, "%s%s", katanaNameType[katana->katanaType], katanaNameDamage[katana->damageAmount - 1]);
+    sprintf(katana->name, "%s%s", katanaNameType[katana->katanaType], katanaNameDamage[katana->damage - 1]);
 }
 
 void genMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            map[y][x].type = TERRAIN_DIRT;
+            currentGameData.map[y][x].type = TERRAIN_DIRT;
         }
     }
     for (int i = 0; i < 20; i++) {
-        terrainAreaMap(rand() % NUMBER_OF_TERRAIN_TYPES, (struct Vec2) {rand() % MAP_HEIGHT, rand() % MAP_WIDTH}, (rand() % 5) + 2);
+        terrainAreaMap(myRand(NUMBER_OF_TERRAIN_TYPES), (struct Vec2) {myRand(MAP_HEIGHT), myRand(MAP_WIDTH)}, myRand(5) + 2);
     }
 }
 
@@ -318,7 +418,7 @@ void terrainAreaMap(int terrain, struct Vec2 location, int radius) {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
             if ( sqrt(pow(y - location.y, 2)) + (pow(x - location.x, 2)/10) <= radius) {
-                map[y][x].type = terrain;
+                currentGameData.map[y][x].type = terrain;
             }
         }
     }
@@ -326,8 +426,8 @@ void terrainAreaMap(int terrain, struct Vec2 location, int radius) {
 
 /* Misc Functions */
 bool checkForEnemy(struct Vec2 location) {
-    for (int i = 0; i < currentNumberOfEnemies; i++) {
-        if (enemies[i].location.y == location.y && enemies[i].location.x == location.x) {
+    for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+        if (currentGameData.enemies[i].location.y == location.y && currentGameData.enemies[i].location.x == location.x) {
             return 1;
         }
     }
@@ -335,11 +435,18 @@ bool checkForEnemy(struct Vec2 location) {
 }
 
 /* Utility Functions */
+int myRand(int number) {
+    if (number > 0) {
+        return rand() % number;
+    }
+    return 0;
+}
+
 int dice(int number, int sides) {
     sides++;
     int total = 0;
     for (int i = 0; i < number; i++) {
-        total += (rand() % sides);
+        total += myRand(sides);
     }
     
     return total;
@@ -350,51 +457,7 @@ void printError(char *message, char *file, int line){
     printf("In file: %s, line: %i\n", file, line);
     printf("   Error: %s\n", message);
     exit(-1);
-}
-
-double findDistance(struct Vec2 start, struct Vec2 end) {
-    return fmax(abs(end.y - start.y), abs(end.x - start.x));
-}
-
-double findDistanceToClosestEnemy(struct Vec2 location) {
-    int closestEnemy = 0;
-    int closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
-    for (int i = 0; i < currentNumberOfEnemies; i++) {
-        int currentEnemyDistance = findDistance(location, enemies[i].location);
-        if (currentEnemyDistance < closestEnemyDistance) {
-            closestEnemy = i;
-            closestEnemyDistance = currentEnemyDistance;
-        }
-    }
-    return closestEnemyDistance;
-}
-
-struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end) {
-    struct Vec2 step = start;
-
-    if (abs(end.x - start.x) < MAP_HEIGHT) {
-        if (end.y > start.y) {
-            step.y += 1;
-        } else if (end.y < start.y) {
-            step.y -= 1;
-        }
-    }
-
-    if (abs(end.y - start.y) < MAP_WIDTH) {
-        if (end.x > start.x) {
-            step.x += 1;
-        } else if (end.x < start.x) {
-            step.x -= 1;
-        }
-    }
-
-    if ((step.y < 0 || step.y > MAP_HEIGHT) || (step.x < 0 || step.x > MAP_WIDTH)) {
-        return start;
-    }
-
-    return step;
-}   
-
+} 
 
 /* Curses IO Functions */
 
@@ -474,7 +537,14 @@ void printBoarder(){
     printVerticalLine(SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1, "|");
 
     printHorizontalLine(0, 0, SCREEN_WIDTH - 1, "-");
-    printHorizontalLine(SCREEN_HEIGHT / 3, 0,  SCREEN_WIDTH - 1, "-");
+
+
+    /* Health */
+    int healthAsIcons = (( ((float) currentGameData.player.health) / ((float) PLAYER_START_HEALTH)) * ((float) SCREEN_WIDTH)) - 1;
+    printHorizontalLine(SCREEN_HEIGHT / 3, 0, SCREEN_WIDTH - 1, "-");
+    printHorizontalLine(SCREEN_HEIGHT / 3, 0, healthAsIcons, "=");
+
+
     printHorizontalLine(SCREEN_HEIGHT - 1, 0, SCREEN_WIDTH - 1, "-");
 
     mvprintw(0, 0, "+");
@@ -550,11 +620,13 @@ void printKatana(struct Katana katana, int position) {
     
     mvprintw(topLeftCorner.y + 1, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(katana.name)/2), katana.name);
     
-    sprintf(buffer,"Dammage: %i", katana.damageAmount);
+    sprintf(buffer,"Dammage: %i", katana.damage);
     mvprintw(topLeftCorner.y + 3, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
 
-    sprintf(buffer, "Hit Chance: %i", katana.hitChance);
-    mvprintw(topLeftCorner.y + 4, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
+    if (katana.damageMod != 0) {
+        sprintf(buffer, "Damage Mod: %i", katana.damageMod);
+        mvprintw(topLeftCorner.y + 4, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
+    }
 
     sprintf(buffer, "Movement Type: %s", katanaMovementTypeNames[katana.movementType]);
     mvprintw(topLeftCorner.y + 5, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
@@ -565,16 +637,16 @@ void printKatana(struct Katana katana, int position) {
 void printMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            mvprintw(y + 1, x + 1, terrainIcon[map[y][x].type]);
+            mvprintw(y + 1, x + 1, terrainIcon[currentGameData.map[y][x].type]);
         }
     }
 }
 
 void printEntities(){
-    for (int i = 0; i < currentNumberOfEnemies; i++) {
-        enemies[i].location;
-        mvprintw(enemies[i].location.y + 1, enemies[i].location.x + 1, enemyIcon[enemies[i].type]);
+    for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+        currentGameData.enemies[i].location;
+        mvprintw(currentGameData.enemies[i].location.y + 1, currentGameData.enemies[i].location.x + 1, enemyIcon[currentGameData.enemies[i].type]);
     }
 
-    mvprintw(player.location.y + 1, player.location.x + 1, "@");
+    mvprintw(currentGameData.player.location.y + 1, currentGameData.player.location.x + 1, "@");
 }
