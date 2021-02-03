@@ -269,7 +269,7 @@ void playerMove(struct Katana katana) {
             int closestTerrainDistance = MAP_HEIGHT + MAP_WIDTH;
             for (int y = 0; y < MAP_HEIGHT; y++) {
                 for (int x = 0; x < MAP_WIDTH; x++) {
-                    if (currentGameData.map[y][x].type == katanaToTerrain[katana.katanaType]) {
+                    if (currentGameData.map[y][x].type == katanaToTerrain[katana.type]) {
                         int currentTerrainDistance = findDistance(currentGameData.player.location, (struct Vec2) {y, x});
                         if (currentTerrainDistance < closestTerrainDistance) {
                             closestTerrain = (struct Vec2) {y, x};
@@ -390,7 +390,7 @@ void removeEnemy(int enemyIndex) {
 }
 
 void genKatana(struct Katana *katana) {
-    katana->katanaType = myRand(NUMBER_OF_KATANA_TYPES);
+    katana->type = myRand(NUMBER_OF_KATANA_TYPES);
 
     /* 1 - 12 */
     katana->damage = dice(3, 4) + 1;
@@ -400,13 +400,13 @@ void genKatana(struct Katana *katana) {
 
     katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
 
-    sprintf(katana->name, "%s%s", katanaNameType[katana->katanaType], katanaNameDamage[katana->damage - 1]);
+    sprintf(katana->name, "%s%s", katanaNameType[katana->type], katanaNameDamage[katana->damage - 1]);
 }
 
 void genMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            currentGameData.map[y][x].type = TERRAIN_DIRT;
+            currentGameData.map[y][x].type = TERRAIN_GRASS;
         }
     }
     for (int i = 0; i < 20; i++) {
@@ -540,10 +540,11 @@ void printBoarder(){
 
 
     /* Health */
+    attron(COLOR_PAIR(COLOR_MAGENTA));
     int healthAsIcons = (( ((float) currentGameData.player.health) / ((float) PLAYER_START_HEALTH)) * ((float) SCREEN_WIDTH)) - 1;
     printHorizontalLine(SCREEN_HEIGHT / 3, 0, SCREEN_WIDTH - 1, "-");
     printHorizontalLine(SCREEN_HEIGHT / 3, 0, healthAsIcons, "=");
-
+    attrset(A_NORMAL);
 
     printHorizontalLine(SCREEN_HEIGHT - 1, 0, SCREEN_WIDTH - 1, "-");
 
@@ -602,7 +603,8 @@ void printKatana(struct Katana katana, int position) {
     bottomLeftCorner.y = topLeftCorner.y + katanaInfoBoxHeight;
     bottomLeftCorner.x = topLeftCorner.x + katanaInfoBoxWidth;
 
-    
+    attron(COLOR_PAIR(katanaColor[katana.type]));
+
     printVerticalLine(topLeftCorner.x, topLeftCorner.y, bottomRightCorner.y, "|");
     printVerticalLine(topRightCorner.x, topLeftCorner.y, bottomRightCorner.y, "|");
 
@@ -610,10 +612,13 @@ void printKatana(struct Katana katana, int position) {
     printHorizontalLine(bottomLeftCorner.y, topLeftCorner.x, topRightCorner.x, "-");
 
     
-    mvprintw(topLeftCorner.y, topLeftCorner.x, &katanaCornerIcon[katana.katanaType][0]);
-    mvprintw(topRightCorner.y, topRightCorner.x, &katanaCornerIcon[katana.katanaType][0]);
-    mvprintw(bottomRightCorner.y, bottomRightCorner.x, &katanaCornerIcon[katana.katanaType][0]);
-    mvprintw(bottomLeftCorner.y, bottomLeftCorner.x, &katanaCornerIcon[katana.katanaType][0]);
+    mvprintw(topLeftCorner.y, topLeftCorner.x, &katanaCornerIcon[katana.type][0]);
+    mvprintw(topRightCorner.y, topRightCorner.x, &katanaCornerIcon[katana.type][0]);
+    mvprintw(bottomRightCorner.y, bottomRightCorner.x, &katanaCornerIcon[katana.type][0]);
+    mvprintw(bottomLeftCorner.y, bottomLeftCorner.x, &katanaCornerIcon[katana.type][0]);
+
+    attrset(A_NORMAL);
+
 
     char buffer[katanaInfoBoxWidth - 2];
 
@@ -637,16 +642,20 @@ void printKatana(struct Katana katana, int position) {
 void printMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
+            attron(COLOR_PAIR(terrainColor[currentGameData.map[y][x].type]));
             mvprintw(y + 1, x + 1, terrainIcon[currentGameData.map[y][x].type]);
         }
     }
+    attrset(A_NORMAL);
 }
 
 void printEntities(){
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
-        currentGameData.enemies[i].location;
+        attron(COLOR_PAIR(enemyColor[currentGameData.enemies[i].type]));
         mvprintw(currentGameData.enemies[i].location.y + 1, currentGameData.enemies[i].location.x + 1, enemyIcon[currentGameData.enemies[i].type]);
     }
 
+    attron(COLOR_PAIR(COLOR_WHITE));
     mvprintw(currentGameData.player.location.y + 1, currentGameData.player.location.x + 1, "@");
+    attrset(A_NORMAL);
 }

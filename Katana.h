@@ -71,7 +71,7 @@
 
 #define NUMBER_OF_TERRAIN_TYPES 4
 
-#define TERRAIN_DIRT  0 /* None */
+#define TERRAIN_GRASS  0 /* None */
 #define TERRAIN_WATER 1 /* Ice & Lightning synergies */
 #define TERRAIN_ROCK  2 /* Stone & Wind synergies    */
 #define TERRAIN_MAGMA 3 /* Fire & Posion synergies   */
@@ -97,7 +97,7 @@ struct Vec2 {
 
 struct Katana {
     char name[30];
-    int katanaType;
+    int type;
 
     /* 1 - 12 */
     int damage;
@@ -152,14 +152,26 @@ struct GameData {
 /* Global Definitions */
 struct GameData currentGameData;
 
-
+const int enemyColor[NUMBER_OF_ENEMY_TYPES] = {
+    COLOR_GREEN,  /* Basic  */
+    COLOR_CYAN,   /* Energy */
+    COLOR_RED,    /* Strong */
+    COLOR_MAGENTA /* Fluid  */
+};
 
 
 const char terrainIcon[NUMBER_OF_TERRAIN_TYPES][2] = {
-    ".", /* Dirt  */
+    ".", /* Grass  */
     "~", /* Water */
     "*", /* Rock  */
     "^"  /* Magma */
+};
+
+const int terrainColor[NUMBER_OF_TERRAIN_TYPES] = {
+    COLOR_GREEN,  /* Grass  */
+    COLOR_BLUE,   /* Water */
+    COLOR_YELLOW, /* Rock  */
+    COLOR_RED     /* Magma */
 };
 
 const char enemyIcon[NUMBER_OF_ENEMY_TYPES][2] = {
@@ -177,6 +189,15 @@ const char katanaCornerIcon[NUMBER_OF_KATANA_TYPES][2] = {
     "o", /* Stone     */
     "^", /* Lightning */
     "~"  /* Posion    */
+};
+
+const int katanaColor[NUMBER_OF_KATANA_TYPES] = {
+    COLOR_RED,     /* Fire      */
+    COLOR_BLUE,    /* Ice       */
+    COLOR_MAGENTA, /* Wind      */
+    COLOR_YELLOW,  /* Stone     */
+    COLOR_CYAN,    /* Lightning */
+    COLOR_GREEN    /* Posion    */
 };
 
 const int katanaToTerrain[NUMBER_OF_KATANA_TYPES] = {
