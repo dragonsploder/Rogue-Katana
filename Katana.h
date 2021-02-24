@@ -45,19 +45,21 @@
 */
 
 #undef KEY_ENTER
-#define KEY_ENTER 10
+#define KEY_ENTER  10
 
-#define PLAYER_START_HEALTH 100
+#define PLAYER_START_HEALTH  100
+
+#define HISTORY_LENGTH 50
 
 
-#define NUMBER_OF_KATANA_TYPES 6
+#define NUMBER_OF_KATANA_TYPES  6
 
-#define KATANA_FIRE      0
-#define KATANA_ICE       1
-#define KATANA_WIND      2
-#define KATANA_STONE     3
-#define KATANA_LIGHTNING 4
-#define KATANA_POSION    5
+#define KATANA_FIRE       0
+#define KATANA_ICE        1
+#define KATANA_WIND       2
+#define KATANA_STONE      3
+#define KATANA_LIGHTNING  4
+#define KATANA_POSION     5
 
 #define NUMBER_OF_MOVEMENT_TYPES 6
 
@@ -72,9 +74,11 @@
 #define NUMBER_OF_TERRAIN_TYPES 4
 
 #define TERRAIN_GRASS  0 /* None */
-#define TERRAIN_WATER 1 /* Ice & Lightning synergies */
-#define TERRAIN_ROCK  2 /* Stone & Wind synergies    */
-#define TERRAIN_MAGMA 3 /* Fire & Posion synergies   */
+#define TERRAIN_WATER  1 /* Ice & Lightning synergies */
+#define TERRAIN_ROCK   2 /* Stone & Wind synergies    */
+#define TERRAIN_MAGMA  3 /* Fire & Posion synergies   */
+
+#define TERRAIN_SYNERGY_PERCENT 1.3
 
 #define NUMBER_OF_ENEMY_TYPES 4
 
@@ -82,6 +86,8 @@
 #define ENEMY_ENERGY  1 /* Fire & Lightning resistant */
 #define ENEMY_STRONG  2 /* Stone & Wind resistant     */
 #define ENEMY_FLUID   3 /* Ice & Posion resistant     */
+
+#define ENEMY_RESISTANCE_PERCENT 0.7
 
 
 
@@ -119,6 +125,7 @@ struct Player {
 
 struct Enemy {
     int type;
+    int maxHeath;
     int health;
     int damage;
     int speed; /* 1:normal - 6:slow */
@@ -147,6 +154,11 @@ struct GameData {
     struct Tile map[MAP_HEIGHT][MAP_WIDTH];
 
     int turn;
+
+    /* [0]:type, [1]:location */
+    int previousMoves[HISTORY_LENGTH][2];
+
+    int currentEnemyToAttack;
 };
 
 /* Global Definitions */
@@ -174,11 +186,15 @@ const int terrainColor[NUMBER_OF_TERRAIN_TYPES] = {
     COLOR_RED     /* Magma */
 };
 
-const char enemyIcon[NUMBER_OF_ENEMY_TYPES][2] = {
+const char enemyIcon[NUMBER_OF_ENEMY_TYPES * 2][2] = {
     "B", /* Basic  */
     "E", /* Energy */
     "S", /* Strong */
-    "F"  /* Fluid  */
+    "F", /* Fluid  */
+    "b", 
+    "e",
+    "s",
+    "f"
 };
 
 
@@ -206,7 +222,16 @@ const int katanaToTerrain[NUMBER_OF_KATANA_TYPES] = {
     2, /* Wind -> Rock       */
     2, /* Stone -> Rock      */
     3, /* Lightning -> Magma */
-    1, /* Posion -> Water    */
+    1 /* Posion -> Water    */
+};
+
+const int katanaToEnemyResistance[NUMBER_OF_KATANA_TYPES] = {
+    1, /* Fire -> Energy is resistant      */
+    3, /* Ice -> Fluid is resistant        */
+    2, /* Wind -> Strong is resistant      */
+    2, /* Stone -> Strong is resistant     */
+    1, /* Lightning -> Energy is resistant */
+    3 /* Posion -> Fluid is resistant     */
 };
 
 const char katanaMovementTypeNames[NUMBER_OF_MOVEMENT_TYPES][10] = {
@@ -249,7 +274,7 @@ void gameLoop();                                                     /* Game loo
 double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance between two points        */
 double findDistanceToClosestEnemy(struct Vec2 location);             /* Function used in retreat movement  */
 struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end);         /* Find next step from start to end   */
-bool findNearbyEnemies(int (*enemies)[8], int *number);                   /* Find enemies adjacent to player    */
+bool findNearbyEnemies(int (*enemies)[8], int *number);              /* Find enemies adjacent to player    */
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
 void playerMove(struct Katana katana);                               /* Moves the player                   */
 void enemyMovemet(int enemyIndex);                                   /* Moves an enemy                     */
@@ -268,12 +293,13 @@ bool checkForEnemy(struct Vec2 location);                            /* Check if
 int myRand(int number);                                              /* Same as rand(), but works with 0   */
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
 void printError(char* message, char* file, int line);                /* Error function used by ERROR()     */
+void pushPreviousMove(int type, int location);                       /* Push values to previousMoves       */
 /*---- Miscellaneous Functions ----------------------------------------------------------------------------*/
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/
 void initCurses();                                                   /* Initalise Curses library           */
 void initColor();                                                    /* Initalise color for Curses         */
 void stopCurses();                                                   /* Stop Curses library                */
-int  myGetch();                                                      /* Get keystroke                      */
+int myGetch();                                                       /* Get keystroke                      */
 void clearScreen();                                                  /* Clear screen                       */ 
 void printHorizontalLine(int y, int start, int stop, char* toPrint); /* Print horizontal line              */ 
 void printVerticalLine(int x, int start, int stop, char* toPrint);   /* Print vertical line                */ 

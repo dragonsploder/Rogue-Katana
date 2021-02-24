@@ -87,6 +87,7 @@ void gameLoop() {
         }
         
         if (validMove) {
+            currentGameData.currentEnemyToAttack = -1;
             if (selectedKatana != -1) {
                 int nearByEnemies[8];
                 int number;
@@ -101,9 +102,11 @@ void gameLoop() {
                         }
                     }
                     attackEnemy(nearByEnemies[lowestLevelIndex], currentGameData.player.katanas[selectedKatana]);
+                    currentGameData.currentEnemyToAttack = nearByEnemies[lowestLevelIndex];
                 } else {
                     playerMove(currentGameData.player.katanas[selectedKatana]);
                 }
+                pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana);
             }
             
             
@@ -322,9 +325,21 @@ void enemyMovemet(int enemyIndex) {
 /* Attacking */
 
 void attackEnemy(int enemyIndex, struct Katana katana) {
-    currentGameData.enemies[enemyIndex].health -= katana.damage + myRand(katana.damageMod);
+    double resistancePercent = 1.0;
+    if (katanaToTerrain[katana.type] == currentGameData.enemies[enemyIndex].type) {
+        resistancePercent = ENEMY_RESISTANCE_PERCENT;
+    } 
+
+    double synergyPercent = 1.0;
+    if (katanaToTerrain[katana.type] == currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type) {
+        synergyPercent = TERRAIN_SYNERGY_PERCENT;
+    } 
+
+
+    currentGameData.enemies[enemyIndex].health -= (katana.damage + myRand(katana.damageMod)) * resistancePercent * synergyPercent;
     if (currentGameData.enemies[enemyIndex].health <= 0) {
         removeEnemy(enemyIndex);
+        genEnemy();
     }
 }
 
@@ -343,7 +358,8 @@ void genEnemy() {
 
         currentEnemy->speed = abs(dice(3, 4) - 6);
 
-        currentEnemy->health = dice(4, 5);
+        currentEnemy->maxHeath = dice(4, 5);
+        currentEnemy->health = currentEnemy->maxHeath;
         currentEnemy->damage = dice(2, 5);
         currentEnemy->level = currentGameData.enemies[currentGameData.currentNumberOfEnemies].health * currentGameData.enemies[currentGameData.currentNumberOfEnemies].damage;
 
@@ -375,7 +391,7 @@ void genEnemy() {
                     ERROR("myRand has failed me");
                 }
             }
-        } while (checkForEnemy(location) != 0);
+        } while (checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location) < 5);
 
         currentEnemy->location = location;
         currentGameData.currentNumberOfEnemies++;
@@ -459,6 +475,15 @@ void printError(char *message, char *file, int line){
     exit(-1);
 } 
 
+void pushPreviousMove(int type, int location) {
+    for (int i = 0; i < HISTORY_LENGTH - 1; i++) {
+        currentGameData.previousMoves[i + 1][0] = currentGameData.previousMoves[i][0];
+        currentGameData.previousMoves[i + 1][1] = currentGameData.previousMoves[i][1];
+    }
+    currentGameData.previousMoves[0][0] = type;
+    currentGameData.previousMoves[0][1] = location;
+}
+
 /* Curses IO Functions */
 
 
@@ -538,13 +563,32 @@ void printBoarder(){
 
     printHorizontalLine(0, 0, SCREEN_WIDTH - 1, "-");
 
+    double healthAsIcons;
+    /* Player health */
+    attron(COLOR_PAIR(COLOR_RED));
+    healthAsIcons = (( ((double) currentGameData.player.health) / ((double) PLAYER_START_HEALTH)) * (((double) SCREEN_WIDTH) / 2));
+    if (healthAsIcons > 0 && healthAsIcons < 1) {
+        healthAsIcons = 1;
+    }
+    printHorizontalLine(SCREEN_HEIGHT / 3, 1, (SCREEN_WIDTH / 2) - 1, "-");
+    printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (int) healthAsIcons - 1, (SCREEN_WIDTH / 2) - 1, "=");
 
-    /* Health */
+    /* Enemy health */
     attron(COLOR_PAIR(COLOR_MAGENTA));
-    int healthAsIcons = (( ((float) currentGameData.player.health) / ((float) PLAYER_START_HEALTH)) * ((float) SCREEN_WIDTH)) - 1;
-    printHorizontalLine(SCREEN_HEIGHT / 3, 0, SCREEN_WIDTH - 1, "-");
-    printHorizontalLine(SCREEN_HEIGHT / 3, 0, healthAsIcons, "=");
+    if (currentGameData.currentEnemyToAttack != -1) {
+        healthAsIcons = (( ((double) currentGameData.enemies[currentGameData.currentEnemyToAttack].health) / ((double) currentGameData.enemies[currentGameData.currentEnemyToAttack].maxHeath)) * (((double) SCREEN_WIDTH) / 2));
+        if (healthAsIcons > 0 && healthAsIcons < 1) {
+            healthAsIcons = 1;
+        }
+    } else {
+        healthAsIcons = (SCREEN_WIDTH / 2);
+    }
+    printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2), SCREEN_WIDTH - 1, "-");
+    printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2), (SCREEN_WIDTH / 2) + (int) healthAsIcons - 1, "=");
+
     attrset(A_NORMAL);
+
+
 
     printHorizontalLine(SCREEN_HEIGHT - 1, 0, SCREEN_WIDTH - 1, "-");
 
@@ -652,7 +696,11 @@ void printMap() {
 void printEntities(){
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
         attron(COLOR_PAIR(enemyColor[currentGameData.enemies[i].type]));
-        mvprintw(currentGameData.enemies[i].location.y + 1, currentGameData.enemies[i].location.x + 1, enemyIcon[currentGameData.enemies[i].type]);
+        if (currentGameData.enemies[i].level > 100) {
+            mvprintw(currentGameData.enemies[i].location.y + 1, currentGameData.enemies[i].location.x + 1, enemyIcon[currentGameData.enemies[i].type]);
+        } else {
+            mvprintw(currentGameData.enemies[i].location.y + 1, currentGameData.enemies[i].location.x + 1, enemyIcon[currentGameData.enemies[i].type + NUMBER_OF_ENEMY_TYPES]);
+        }
     }
 
     attron(COLOR_PAIR(COLOR_WHITE));
