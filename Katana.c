@@ -27,7 +27,7 @@ void main(){
     currentGameData.turn = 0;
 
     initCurses();
-    printBoarder();
+    //printBoarder();
 
 
     genMap();
@@ -58,10 +58,16 @@ void gameLoop() {
     int selectedKatana;
 
     bool validMove;
+    bool accessHelp;
 
     do {
+        if (currentGameData.turn % 10 == 0) {
+            genFallenKatana();
+        }
+
         selectedKatana = -1;
         validMove = true;
+        accessHelp = false;
         
         switch (command) {
             case TOP_LEFT_KATANA: {
@@ -80,7 +86,12 @@ void gameLoop() {
                 selectedKatana = 3;
                 break;
             }
-            
+
+            case HELP_KEY: {
+                accessHelp = true;
+                break;
+            } 
+
             default: {
                 validMove = false;
             }
@@ -105,6 +116,9 @@ void gameLoop() {
                     currentGameData.currentEnemyToAttack = nearByEnemies[lowestLevelIndex];
                 } else {
                     playerMove(currentGameData.player.katanas[selectedKatana]);
+                    /*if (currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].hasFallenKatana) {
+                        pickUpFallenKatana();
+                    }*/
                 }
                 pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana);
             }
@@ -123,17 +137,27 @@ void gameLoop() {
             currentGameData.turn++;
         }
 
+        if (accessHelp) {
+            clear();
+            for (int i = 0; i < NUMBER_OF_QUICK_HELP_LINES; i++) {
+                mvprintw(i + 2, 1, quickHelpText[i]);
+            }
+            printBoarder(false);
+            myGetch();
+        }
 
-        printBoarder();
+        clear();
+        printBoarder(true);
         printMap();
         for (int i = 0; i < 4; i++) {
             printKatana(currentGameData.player.katanas[i], i);
         }
         printEntities();
 
+        printKatanaDescription(currentGameData.player.katanas[0]);
 
         command = myGetch();
-    } while (command != 'q' && currentGameData.player.health > 0);
+    } while (command != 'Q' && currentGameData.player.health > 0);
 }
 
 /* Find functions */
@@ -391,7 +415,7 @@ void genEnemy() {
                     ERROR("myRand has failed me");
                 }
             }
-        } while (checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location) < 5);
+        } while (checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location) < 8);
 
         currentEnemy->location = location;
         currentGameData.currentNumberOfEnemies++;
@@ -419,10 +443,31 @@ void genKatana(struct Katana *katana) {
     sprintf(katana->name, "%s%s", katanaNameType[katana->type], katanaNameDamage[katana->damage - 1]);
 }
 
+void genFallenKatana() {
+    struct Katana fallenKatana;
+    genKatana(&fallenKatana);
+
+    struct Vec2 location;
+    do {
+        location.x = myRand(MAP_WIDTH);
+        location.y = myRand(MAP_HEIGHT);
+    } while(findDistance(location, currentGameData.player.location) < 5 || checkForEnemy(location) || currentGameData.map[location.y][location.x].hasFallenKatana);
+
+    if (myRand(3) == 0) {
+        terrainAreaMap(katanaToTerrain[fallenKatana.type], location, myRand(3) + 1);
+    } else {
+        terrainAreaMap(TERRAIN_GRASS, location, myRand(3) + 1);
+    }
+
+    currentGameData.map[location.y][location.x].fallenKatana = fallenKatana;
+    currentGameData.map[location.y][location.x].hasFallenKatana = true;
+}
+
 void genMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
             currentGameData.map[y][x].type = TERRAIN_GRASS;
+            currentGameData.map[y][x].hasFallenKatana = false;
         }
     }
     for (int i = 0; i < 20; i++) {
@@ -448,6 +493,10 @@ bool checkForEnemy(struct Vec2 location) {
         }
     }
     return 0;
+}
+
+void pickUpFallenKatana() {
+    //printKatanaDescription();
 }
 
 /* Utility Functions */
@@ -551,42 +600,44 @@ void printVerticalLine(int x, int start, int stop, char* toPrint){
 
 
 void printBox(int y, int x, int stopY, int stopX, char* toPrint){
-    for (int i = y; i < stopY; i++){
+    for (int i = y; i <= stopY; i++){
         printHorizontalLine(i, x, stopX, toPrint);
     }
 }
 
 
-void printBoarder(){
+void printBoarder(bool printMiddle){
     printVerticalLine(0, 0, SCREEN_HEIGHT - 1, "|");
     printVerticalLine(SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1, "|");
 
     printHorizontalLine(0, 0, SCREEN_WIDTH - 1, "-");
 
-    double healthAsIcons;
-    /* Player health */
-    attron(COLOR_PAIR(COLOR_RED));
-    healthAsIcons = (( ((double) currentGameData.player.health) / ((double) PLAYER_START_HEALTH)) * (((double) SCREEN_WIDTH) / 2));
-    if (healthAsIcons > 0 && healthAsIcons < 1) {
-        healthAsIcons = 1;
-    }
-    printHorizontalLine(SCREEN_HEIGHT / 3, 1, (SCREEN_WIDTH / 2) - 1, "-");
-    printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (int) healthAsIcons - 1, (SCREEN_WIDTH / 2) - 1, "=");
-
-    /* Enemy health */
-    attron(COLOR_PAIR(COLOR_MAGENTA));
-    if (currentGameData.currentEnemyToAttack != -1) {
-        healthAsIcons = (( ((double) currentGameData.enemies[currentGameData.currentEnemyToAttack].health) / ((double) currentGameData.enemies[currentGameData.currentEnemyToAttack].maxHeath)) * (((double) SCREEN_WIDTH) / 2));
+    if (printMiddle) {
+        double healthAsIcons;
+        /* Player health */
+        attron(COLOR_PAIR(COLOR_RED));
+        healthAsIcons = (( ((double) currentGameData.player.health) / ((double) PLAYER_START_HEALTH)) * (((double) SCREEN_WIDTH) / 2));
         if (healthAsIcons > 0 && healthAsIcons < 1) {
             healthAsIcons = 1;
         }
-    } else {
-        healthAsIcons = (SCREEN_WIDTH / 2);
-    }
-    printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2), SCREEN_WIDTH - 1, "-");
-    printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2), (SCREEN_WIDTH / 2) + (int) healthAsIcons - 1, "=");
+        printHorizontalLine(SCREEN_HEIGHT / 3, 1, (SCREEN_WIDTH / 2) - 1, "-");
+        printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (int) healthAsIcons - 1, (SCREEN_WIDTH / 2) - 1, "=");
 
-    attrset(A_NORMAL);
+        /* Enemy health */
+        attron(COLOR_PAIR(COLOR_MAGENTA));
+        if (currentGameData.currentEnemyToAttack != -1) {
+            healthAsIcons = (( ((double) currentGameData.enemies[currentGameData.currentEnemyToAttack].health) / ((double) currentGameData.enemies[currentGameData.currentEnemyToAttack].maxHeath)) * (((double) SCREEN_WIDTH) / 2));
+            if (healthAsIcons > 0 && healthAsIcons < 1) {
+                healthAsIcons = 1;
+            }
+        } else {
+            healthAsIcons = (SCREEN_WIDTH / 2);
+        }
+        printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2), SCREEN_WIDTH - 1, "-");
+        printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2), (SCREEN_WIDTH / 2) + (int) healthAsIcons - 1, "=");
+
+        attrset(A_NORMAL);
+    }
 
 
 
@@ -595,8 +646,10 @@ void printBoarder(){
     mvprintw(0, 0, "+");
     mvprintw(0, SCREEN_WIDTH - 1, "+");
 
-    mvprintw(SCREEN_HEIGHT / 3, 0, "+");
-    mvprintw(SCREEN_HEIGHT / 3, SCREEN_WIDTH - 1, "+");
+    if (printMiddle) {
+        mvprintw(SCREEN_HEIGHT / 3, 0, "+");
+        mvprintw(SCREEN_HEIGHT / 3, SCREEN_WIDTH - 1, "+");
+    }
 
     mvprintw(SCREEN_HEIGHT - 1, 0, "+");
     mvprintw(SCREEN_HEIGHT - 1, SCREEN_WIDTH - 1, "+");
@@ -683,11 +736,45 @@ void printKatana(struct Katana katana, int position) {
     
 }
 
+void printKatanaDescription(struct Katana katana) {
+    printBox(1, 1, MAP_HEIGHT, MAP_WIDTH, " ");
+
+    attron(COLOR_PAIR(katanaColor[katana.type]));
+
+    mvprintw(1, 1, katanaCornerIcon[katana.type]);
+    mvprintw(1, MAP_WIDTH, katanaCornerIcon[katana.type]);
+    mvprintw(MAP_HEIGHT, 1, katanaCornerIcon[katana.type]);
+    mvprintw(MAP_HEIGHT, MAP_WIDTH, katanaCornerIcon[katana.type]);
+
+
+    mvprintw(1, (MAP_WIDTH/2) - (strlen(katana.name)/2), katana.name);
+
+    attrset(A_NORMAL);
+
+    char buffer[MAP_WIDTH];
+    char damageModBuffer[20];
+
+    if (katana.damageMod != 0) {
+        sprintf(damageModBuffer,"  Damage Mod: %i  ", katana.damageMod);
+    } else {
+        sprintf(damageModBuffer,"");
+    }
+    
+    sprintf(buffer,"Damage: %i  %s  Movement Type: %s", katana.damage, damageModBuffer, katanaMovementTypeNames[katana.movementType]);
+
+    mvprintw(2, (MAP_WIDTH/2) - (strlen(buffer)/2), buffer);
+}
+
 void printMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            attron(COLOR_PAIR(terrainColor[currentGameData.map[y][x].type]));
-            mvprintw(y + 1, x + 1, terrainIcon[currentGameData.map[y][x].type]);
+            if (!currentGameData.map[y][x].hasFallenKatana) {
+                attron(COLOR_PAIR(terrainColor[currentGameData.map[y][x].type]));
+                mvprintw(y + 1, x + 1, terrainIcon[currentGameData.map[y][x].type]);
+            } else {
+                attron(COLOR_PAIR(katanaColor[currentGameData.map[y][x].fallenKatana.type]));
+                mvprintw(y + 1, x + 1, "!");
+            }
         }
     }
     attrset(A_NORMAL);

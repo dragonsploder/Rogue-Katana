@@ -16,10 +16,11 @@
 #define ERROR(x) printError(#x,__FILE__, __LINE__)
 
 /* Controls */
-#define TOP_LEFT_KATANA 'u'
-#define TOP_RIGHT_KATANA 'i'
-#define BOTTOM_LEFT_KATANA 'j'
-#define BOTTOM_RIGHT_KATANA 'k'
+#define TOP_LEFT_KATANA      'u'
+#define TOP_RIGHT_KATANA     'i'
+#define BOTTOM_LEFT_KATANA   'j'
+#define BOTTOM_RIGHT_KATANA  'k'
+#define HELP_KEY             'h'
 
 /* Screen laylout def */
 #define SCREEN_HEIGHT 24
@@ -142,6 +143,8 @@ struct Enemy {
 
 struct Tile {
     int type;
+    bool hasFallenKatana;
+    struct Katana fallenKatana;
 };
 
 struct GameData {
@@ -163,6 +166,27 @@ struct GameData {
 
 /* Global Definitions */
 struct GameData currentGameData;
+
+#define NUMBER_OF_QUICK_HELP_LINES 17
+const char quickHelpText[NUMBER_OF_QUICK_HELP_LINES][100] = {
+"   Katana Types (icon):    Terrain types (icon):    Enemy Types (icon):       ",
+"       Fire        (*)         Grass        (.)        Basic       (B)        ",
+"       Ice         (+)         Water        (~)        Energy      (E)        ",
+"       Wind        (=)         Rock         (*)        Strong      (S)        ",
+"       Stone       (o)         Magma        (^)        Fluid       (F)        ",
+"       Lightning   (^)                                                        ",
+"       Posion      (~)                                                        ",
+"                                                                              ",
+"    Fire       works better on  Magma  but worse against  Energy  enemies     ",
+"    Ice        works better on  Water  but worse against  Fluid   enemies     ",
+"    Wind       works better on  Rock   but worse against  Strong  enemies     ",
+"    Stone      works better on  Rock   but worse against  Strong  enemies     ",
+"    Lightning  works better on  Magma  but worse against  Energy  enemies     ",
+"    Posion     works better on  Water  but worse against  Fluid   enemies     ",
+"                                                                              ",
+"                       Lowercase enemies are weaker                           ",
+"                      (!) represents a fallen katana                          "
+};
 
 const int enemyColor[NUMBER_OF_ENEMY_TYPES] = {
     COLOR_GREEN,  /* Basic  */
@@ -222,7 +246,7 @@ const int katanaToTerrain[NUMBER_OF_KATANA_TYPES] = {
     2, /* Wind -> Rock       */
     2, /* Stone -> Rock      */
     3, /* Lightning -> Magma */
-    1 /* Posion -> Water    */
+    1  /* Posion -> Water    */
 };
 
 const int katanaToEnemyResistance[NUMBER_OF_KATANA_TYPES] = {
@@ -231,7 +255,7 @@ const int katanaToEnemyResistance[NUMBER_OF_KATANA_TYPES] = {
     2, /* Wind -> Strong is resistant      */
     2, /* Stone -> Strong is resistant     */
     1, /* Lightning -> Energy is resistant */
-    3 /* Posion -> Fluid is resistant     */
+    3  /* Posion -> Fluid is resistant     */
 };
 
 const char katanaMovementTypeNames[NUMBER_OF_MOVEMENT_TYPES][10] = {
@@ -285,6 +309,7 @@ void attackPlayer(int enemyIndex);                                   /* Attack t
 void genEnemy();                                                     /* Generate a random enemy            */
 void removeEnemy(int enemyIndex);                                    /* Removes an enemy                   */
 void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
+void genFallenKatana();                                              /* Generate a random fallen Katana    */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
@@ -304,8 +329,9 @@ void clearScreen();                                                  /* Clear sc
 void printHorizontalLine(int y, int start, int stop, char* toPrint); /* Print horizontal line              */ 
 void printVerticalLine(int x, int start, int stop, char* toPrint);   /* Print vertical line                */ 
 void printBox(int y, int x, int stopY, int stopX, char* toPrint);    /* Print a filled in box              */ 
-void printBoarder();                                                 /* Print boarder around screen        */
+void printBoarder(bool printMiddle);                                 /* Print boarder around screen        */
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */
+void printKatanaDescription(struct Katana katana);                   /* Print more in-depth katana info    */
 void printMap();                                                     /* Print map at top of screen         */
 void printEntities();                                                /* Print player and enemies           */
 /*---- End of File ----------------------------------------------------------------------------------------*/
