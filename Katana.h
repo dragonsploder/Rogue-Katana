@@ -20,6 +20,12 @@
 #define TOP_RIGHT_KATANA     'i'
 #define BOTTOM_LEFT_KATANA   'j'
 #define BOTTOM_RIGHT_KATANA  'k'
+
+#define TOP_LEFT_KATANA_SECONDARY      'U'
+#define TOP_RIGHT_KATANA_SECONDARY     'I'
+#define BOTTOM_LEFT_KATANA_SECONDARY   'J'
+#define BOTTOM_RIGHT_KATANA_SECONDARY  'K'
+
 #define HELP_KEY             'h'
 
 /* Screen laylout def */
@@ -112,6 +118,8 @@ struct Katana {
     int damageMod;
 
     int movementType;
+
+    char katanaImage[3][MAP_WIDTH];
 
 };
 
@@ -291,6 +299,45 @@ const char katanaNameDamage[KATANA_MAX_DAMAGE][10] = {
     "kitsune"  /* Fox     */
 };
 
+#define NUMBER_OF_KATANA_GUARD_TYPES 5
+const char katanaGuardTypes[NUMBER_OF_KATANA_GUARD_TYPES][3][5] = {
+    {" ^ ", "|||", " v "},
+    {" o ", "| |", " o "},
+    {" ~~", "|:|", " ~~"},
+    {" + ", "=|=", " + "},
+    {" : ", "[|]", " : "}
+};
+
+#define NUMBER_OF_KATANA_HILT_TYPES 10
+const char katanaHiltTypes[NUMBER_OF_KATANA_HILT_TYPES][5] = {
+    "<===",
+    "o===",
+    ">---",
+    ">>>>",
+    "<<<<",
+    "o->>",
+    "-~<<",
+    "-==[",
+    ">==]",
+    "---O"
+};
+
+#define NUMBER_OF_KATANA_BLADE_BODY_TYPES 5
+const char katanaBladeBodyTypes[NUMBER_OF_KATANA_BLADE_BODY_TYPES][18] = {
+    "================",
+    "]]]]]]]]]]]]]]]]",
+    "################",
+    "++++++++++++++++",
+    "::::::::::::::::"
+};
+
+#define NUMBER_OF_KATANA_BLADE_TIP_TYPES 3
+const char katanaBladeTipTypes[NUMBER_OF_KATANA_BLADE_TIP_TYPES][2] = {
+    ">",
+    "+",
+    ":"
+};
+
 /*==== Forward Function Decleration =======================================================================*/
 void main();                                                         /* Main function                      */
 void gameLoop();                                                     /* Game loop which runs every turn    */
@@ -319,6 +366,8 @@ int myRand(int number);                                              /* Same as 
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
 void printError(char* message, char* file, int line);                /* Error function used by ERROR()     */
 void pushPreviousMove(int type, int location);                       /* Push values to previousMoves       */
+void formatBlock(char* oldString, char* newString, int lineLength);  /* Format string for several lines    */
+void sliceIncertString(char* expression, char* incert, int location, int replacmentLen); /* Insert string  */
 /*---- Miscellaneous Functions ----------------------------------------------------------------------------*/
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/
 void initCurses();                                                   /* Initalise Curses library           */
@@ -327,7 +376,8 @@ void stopCurses();                                                   /* Stop Cur
 int myGetch();                                                       /* Get keystroke                      */
 void clearScreen();                                                  /* Clear screen                       */ 
 void printHorizontalLine(int y, int start, int stop, char* toPrint); /* Print horizontal line              */ 
-void printVerticalLine(int x, int start, int stop, char* toPrint);   /* Print vertical line                */ 
+void printVerticalLine(int x, int start, int stop, char* toPrint);   /* Print vertical line                */
+void update(char* message);                                          /* Print message to user              */ 
 void printBox(int y, int x, int stopY, int stopX, char* toPrint);    /* Print a filled in box              */ 
 void printBoarder(bool printMiddle);                                 /* Print boarder around screen        */
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */

@@ -24,17 +24,10 @@ void main(){
     long seed = time(NULL);
     srand(seed);
 
-    currentGameData.turn = 0;
-
     initCurses();
-    //printBoarder();
 
 
-    genMap();
-    printMap();
-
-    genMap(); 
-
+    currentGameData.turn = 0;
 
     strcpy(currentGameData.player.name, "Test");
     currentGameData.player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
@@ -43,6 +36,9 @@ void main(){
     genKatana(&currentGameData.player.katanas[1]);
     genKatana(&currentGameData.player.katanas[2]);
     genKatana(&currentGameData.player.katanas[3]);
+
+
+    genMap();
 
     for (int i = 0; i < 10; i++) {
         genEnemy();
@@ -57,38 +53,56 @@ void gameLoop() {
     int command = 0;
     int selectedKatana;
 
-    bool validMove;
-    bool accessHelp;
+    bool validMove = false;;
+    bool infoKey = false;
+    bool noActionCommand = false;;
 
     do {
-        if (currentGameData.turn % 10 == 0) {
-            genFallenKatana();
-        }
-
+        noActionCommand = infoKey;
         selectedKatana = -1;
         validMove = true;
-        accessHelp = false;
+        infoKey = false;
         
         switch (command) {
             case TOP_LEFT_KATANA: {
                 selectedKatana = 0;
                 break;
             }
+            case TOP_LEFT_KATANA_SECONDARY: {
+                selectedKatana = 0;
+                infoKey = true;
+                break;
+            }
             case TOP_RIGHT_KATANA: {
                 selectedKatana = 1;
+                break;
+            }
+            case TOP_RIGHT_KATANA_SECONDARY: {
+                selectedKatana = 1;
+                infoKey = true;
                 break;
             }
             case BOTTOM_LEFT_KATANA: {
                 selectedKatana = 2;
                 break;
             }
+            case BOTTOM_LEFT_KATANA_SECONDARY: {
+                selectedKatana = 2;
+                infoKey = true;
+                break;
+            }
             case BOTTOM_RIGHT_KATANA: {
                 selectedKatana = 3;
                 break;
             }
+            case BOTTOM_RIGHT_KATANA_SECONDARY: {
+                selectedKatana = 3;
+                infoKey = true;
+                break;
+            }
 
             case HELP_KEY: {
-                accessHelp = true;
+                infoKey = true;
                 break;
             } 
 
@@ -97,7 +111,7 @@ void gameLoop() {
             }
         }
         
-        if (validMove) {
+        if (validMove && !noActionCommand && !infoKey) {
             currentGameData.currentEnemyToAttack = -1;
             if (selectedKatana != -1) {
                 int nearByEnemies[8];
@@ -137,15 +151,6 @@ void gameLoop() {
             currentGameData.turn++;
         }
 
-        if (accessHelp) {
-            clear();
-            for (int i = 0; i < NUMBER_OF_QUICK_HELP_LINES; i++) {
-                mvprintw(i + 2, 1, quickHelpText[i]);
-            }
-            printBoarder(false);
-            myGetch();
-        }
-
         clear();
         printBoarder(true);
         printMap();
@@ -154,7 +159,17 @@ void gameLoop() {
         }
         printEntities();
 
-        printKatanaDescription(currentGameData.player.katanas[0]);
+        if (infoKey) {
+            if (selectedKatana != -1) {
+                printKatanaDescription(currentGameData.player.katanas[selectedKatana]);
+            } else if (command == HELP_KEY) {
+                clear();
+                for (int i = 0; i < NUMBER_OF_QUICK_HELP_LINES; i++) {
+                    mvprintw(i + 2, 1, quickHelpText[i]);
+                }
+                printBoarder(false);
+            }
+        }
 
         command = myGetch();
     } while (command != 'Q' && currentGameData.player.health > 0);
@@ -441,6 +456,19 @@ void genKatana(struct Katana *katana) {
     katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
 
     sprintf(katana->name, "%s%s", katanaNameType[katana->type], katanaNameDamage[katana->damage - 1]);
+
+
+
+    /* Image */
+
+
+
+
+
+    int guardType = myRand(NUMBER_OF_KATANA_GUARD_TYPES);
+    sprintf(katana->katanaImage[0], "    %s", katanaGuardTypes[guardType][0]);
+    sprintf(katana->katanaImage[1], "%s%s%s%s", katanaHiltTypes[myRand(NUMBER_OF_KATANA_HILT_TYPES)], katanaGuardTypes[guardType][1], katanaBladeBodyTypes[myRand(NUMBER_OF_KATANA_BLADE_BODY_TYPES)], katanaBladeTipTypes[myRand(NUMBER_OF_KATANA_BLADE_TIP_TYPES)]);
+    sprintf(katana->katanaImage[2], "    %s", katanaGuardTypes[guardType][2]);
 }
 
 void genFallenKatana() {
@@ -517,7 +545,7 @@ int dice(int number, int sides) {
     return total;
 }
 
-void printError(char *message, char *file, int line){
+void printError(char *message, char *file, int line) {
     stopCurses();
     printf("In file: %s, line: %i\n", file, line);
     printf("   Error: %s\n", message);
@@ -531,6 +559,42 @@ void pushPreviousMove(int type, int location) {
     }
     currentGameData.previousMoves[0][0] = type;
     currentGameData.previousMoves[0][1] = location;
+}
+
+void sliceIncertString(char* expression, char* incert, int location, int replacmentLen){
+    char* oldExpression = (char*) malloc(strlen(expression) * sizeof(char) * 2);
+    strcpy(oldExpression, expression);
+    expression[location] = '\0';
+    strcat(expression, incert);
+    strcat(expression, &oldExpression[location + replacmentLen]);
+}
+
+void formatBlock(char* oldString, char* newString, int lineLength) {
+    int stringLength = strlen(oldString);
+    int temp = 0;
+    int offset = 0;
+
+    for (int i = 0; i < stringLength; i++){
+        newString[i] = oldString[i];
+    }
+
+    for (int i = 0; i < stringLength + offset; i++){
+        if ((i + 1) % lineLength == 0){
+            if (newString[i] != ' ' && newString[i + 1] != ' '){
+                temp = i;
+                while (newString[temp] != ' '){
+                    temp--;
+                }
+                for (int j = temp; j < i; j++){
+                    sliceIncertString(newString, " ", j, 0);
+                    
+                    
+                }
+                offset += (i - temp);
+            }
+        }
+    }
+    newString[stringLength + offset] = '\0';
 }
 
 /* Curses IO Functions */
@@ -603,6 +667,39 @@ void printBox(int y, int x, int stopY, int stopX, char* toPrint){
     for (int i = y; i <= stopY; i++){
         printHorizontalLine(i, x, stopX, toPrint);
     }
+}
+
+void update(char* message){
+    char* formatedMessage = (char *) malloc(strlen(message) * sizeof(char) * 2);
+
+    int messageLineLength = SCREEN_WIDTH - 18;
+
+    formatBlock(message, formatedMessage, messageLineLength);
+
+
+    char mainBuffer[SCREEN_WIDTH - 2];
+    char secondaryBuffer[messageLineLength + 1];
+
+    int linesNeeded = (int) (strlen(formatedMessage) / (messageLineLength)) + 1;
+
+    for (int i = 0; i < linesNeeded; i++) {
+        strncpy(secondaryBuffer, &formatedMessage[i * messageLineLength], messageLineLength);
+        secondaryBuffer[messageLineLength] = '\0';
+        if (i != linesNeeded - 1) {
+            sprintf(mainBuffer, "%s -cont- (space)", secondaryBuffer);
+        } else {
+            sprintf(mainBuffer, "%s (space)", secondaryBuffer);
+        }
+        do {
+            printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
+            mvprintw(SCREEN_HEIGHT / 3, 1, mainBuffer);
+        } while(myGetch() != ' ');
+    }
+
+    free(formatedMessage);
+
+
+    printBoarder(true);
 }
 
 
@@ -763,6 +860,18 @@ void printKatanaDescription(struct Katana katana) {
     sprintf(buffer,"Damage: %i  %s  Movement Type: %s", katana.damage, damageModBuffer, katanaMovementTypeNames[katana.movementType]);
 
     mvprintw(2, (MAP_WIDTH/2) - (strlen(buffer)/2), buffer);
+
+
+    attron(COLOR_PAIR(katanaColor[katana.type]));
+
+    int imageHeightOffset = (MAP_HEIGHT / 3) * 2;
+    int imageWidthOffset = (MAP_WIDTH/2) - (strlen(katana.katanaImage[1])/2);
+
+    mvprintw(imageHeightOffset, imageWidthOffset, katana.katanaImage[0]);
+    mvprintw(imageHeightOffset + 1, imageWidthOffset, katana.katanaImage[1]);
+    mvprintw(imageHeightOffset + 2, imageWidthOffset, katana.katanaImage[2]);
+
+    attrset(A_NORMAL);
 }
 
 void printMap() {
