@@ -42,6 +42,7 @@ void main(){
 
     for (int i = 0; i < 10; i++) {
         genEnemy();
+        genFallenKatana();
     }
 
     gameLoop();
@@ -130,9 +131,9 @@ void gameLoop() {
                     currentGameData.currentEnemyToAttack = nearByEnemies[lowestLevelIndex];
                 } else {
                     playerMove(currentGameData.player.katanas[selectedKatana]);
-                    /*if (currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].hasFallenKatana) {
+                    if (currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].hasFallenKatana) {
                         pickUpFallenKatana();
-                    }*/
+                    }
                 }
                 pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana);
             }
@@ -523,8 +524,51 @@ bool checkForEnemy(struct Vec2 location) {
     return 0;
 }
 
+void replaceKatana(int slot, struct Katana katana) {
+    currentGameData.player.katanas[slot] = katana;
+}
+
 void pickUpFallenKatana() {
-    //printKatanaDescription();
+    struct Katana fallenKatana = currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].fallenKatana;
+    printKatanaDescription(fallenKatana);
+
+    char buffer[40];
+
+    sprintf(buffer, "Select a katana to switch, \"%c\" to break it.", BREAK_KATANA_KEY);
+
+    update(buffer, false);
+
+    int command;
+    bool validAction;
+    do {
+        validAction = true;
+        command = myGetch();
+        switch (command) {
+        case TOP_LEFT_KATANA:
+            replaceKatana(0, fallenKatana);
+            break;
+        case TOP_RIGHT_KATANA:
+            replaceKatana(1, fallenKatana);
+            break;
+        case BOTTOM_LEFT_KATANA:
+            replaceKatana(2, fallenKatana);
+            break;
+        case BOTTOM_RIGHT_KATANA:
+            replaceKatana(3, fallenKatana);
+            break;
+        case BREAK_KATANA_KEY: /* Small health boost */
+            currentGameData.player.health += myRand(fallenKatana.damage);
+            if (currentGameData.player.health > PLAYER_START_HEALTH) {
+                currentGameData.player.health = PLAYER_START_HEALTH;
+            }
+            break;
+        default:
+            validAction = false;
+            break;
+        }
+    } while(!validAction);
+
+    currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].hasFallenKatana = false;
 }
 
 /* Utility Functions */
@@ -669,7 +713,7 @@ void printBox(int y, int x, int stopY, int stopX, char* toPrint){
     }
 }
 
-void update(char* message){
+void update(char* message, bool pause){
     char* formatedMessage = (char *) malloc(strlen(message) * sizeof(char) * 2);
 
     int messageLineLength = SCREEN_WIDTH - 18;
@@ -687,19 +731,27 @@ void update(char* message){
         secondaryBuffer[messageLineLength] = '\0';
         if (i != linesNeeded - 1) {
             sprintf(mainBuffer, "%s -cont- (space)", secondaryBuffer);
-        } else {
+        } else if (pause) {
             sprintf(mainBuffer, "%s (space)", secondaryBuffer);
+        } else {
+            sprintf(mainBuffer, "%s", secondaryBuffer);
         }
-        do {
+        if (pause) {
+            do {
+                printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
+                mvprintw(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (strlen(mainBuffer) / 2), mainBuffer);
+            } while(myGetch() != ' ');
+        } else {
             printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
-            mvprintw(SCREEN_HEIGHT / 3, 1, mainBuffer);
-        } while(myGetch() != ' ');
+            mvprintw(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (strlen(mainBuffer) / 2), mainBuffer);
+        }
     }
 
     free(formatedMessage);
 
-
-    printBoarder(true);
+    if (pause) {
+        printBoarder(true);
+    }
 }
 
 

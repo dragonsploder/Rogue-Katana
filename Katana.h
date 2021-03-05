@@ -26,6 +26,7 @@
 #define BOTTOM_LEFT_KATANA_SECONDARY   'J'
 #define BOTTOM_RIGHT_KATANA_SECONDARY  'K'
 
+#define BREAK_KATANA_KEY     'b'
 #define HELP_KEY             'h'
 
 /* Screen laylout def */
@@ -361,6 +362,8 @@ void genMap();                                                       /* Generate
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
+void replaceKatana(int slot, struct Katana katana);                  /* Replace katana with a new one      */
+void pickUpFallenKatana();                                           /* Pick up a fallen katana            */
 /*---- Utility Functions ----------------------------------------------------------------------------------*/
 int myRand(int number);                                              /* Same as rand(), but works with 0   */
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
@@ -368,7 +371,6 @@ void printError(char* message, char* file, int line);                /* Error fu
 void pushPreviousMove(int type, int location);                       /* Push values to previousMoves       */
 void formatBlock(char* oldString, char* newString, int lineLength);  /* Format string for several lines    */
 void sliceIncertString(char* expression, char* incert, int location, int replacmentLen); /* Insert string  */
-/*---- Miscellaneous Functions ----------------------------------------------------------------------------*/
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/
 void initCurses();                                                   /* Initalise Curses library           */
 void initColor();                                                    /* Initalise color for Curses         */
@@ -377,7 +379,7 @@ int myGetch();                                                       /* Get keys
 void clearScreen();                                                  /* Clear screen                       */ 
 void printHorizontalLine(int y, int start, int stop, char* toPrint); /* Print horizontal line              */ 
 void printVerticalLine(int x, int start, int stop, char* toPrint);   /* Print vertical line                */
-void update(char* message);                                          /* Print message to user              */ 
+void update(char* message, bool pause);                              /* Print message to user              */ 
 void printBox(int y, int x, int stopY, int stopX, char* toPrint);    /* Print a filled in box              */ 
 void printBoarder(bool printMiddle);                                 /* Print boarder around screen        */
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */
