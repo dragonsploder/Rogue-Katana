@@ -118,6 +118,7 @@ void gameLoop() {
                 int nearByEnemies[8];
                 int number;
                 if (findNearbyEnemies(&nearByEnemies, &number)) {
+                
                     /* Right now attack lowest level enemy */
                     int lowestLevelIndex = 0;
                     int lowestLevel = 100;
@@ -127,13 +128,15 @@ void gameLoop() {
                             lowestLevel = currentGameData.enemies[nearByEnemies[i]].level;
                         }
                     }
-                    attackEnemy(nearByEnemies[lowestLevelIndex], currentGameData.player.katanas[selectedKatana]);
+                    attackEnemy(nearByEnemies[lowestLevelIndex], &currentGameData.player.katanas[selectedKatana]);
                     currentGameData.currentEnemyToAttack = nearByEnemies[lowestLevelIndex];
+                    currentGameData.player.katanas[selectedKatana].numberOfStrikes++;
                 } else {
                     playerMove(currentGameData.player.katanas[selectedKatana]);
                     if (currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].hasFallenKatana) {
                         pickUpFallenKatana();
                     }
+                    currentGameData.player.katanas[selectedKatana].numberOfMoves++;
                 }
                 pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana);
             }
@@ -144,7 +147,7 @@ void gameLoop() {
                     if (findDistance(currentGameData.enemies[i].location, currentGameData.player.location) == 1) {
                         attackPlayer(i);
                     } else {
-                        enemyMovemet(i);
+                        enemyMovement(i);
                     }
                 }
             }
@@ -329,6 +332,24 @@ void playerMove(struct Katana katana) {
             newLocation = currentGameData.player.location;
             break;
         }
+
+        case MOVEMENT_FALLEN: { /* This too could be more efficient */
+            struct Vec2 closestFallenKatana = (struct Vec2) {0, 0};
+            int closestFallenKatanaDistance = MAP_HEIGHT + MAP_WIDTH;
+            for (int y = 0; y < MAP_HEIGHT; y++) {
+                for (int x = 0; x < MAP_WIDTH; x++) {
+                    if (currentGameData.map[y][x].hasFallenKatana) {
+                        int currentFallenKatanaDistance = findDistance(currentGameData.player.location, (struct Vec2) {y, x});
+                        if (currentFallenKatanaDistance < closestFallenKatanaDistance) {
+                            closestFallenKatana = (struct Vec2) {y, x};
+                            closestFallenKatanaDistance = currentFallenKatanaDistance;
+                        }
+                    }
+                }
+            }
+            newLocation = pathFinding(currentGameData.player.location, closestFallenKatana);
+            break;
+        }
         
         case MOVEMENT_RAND: {
             do {
@@ -348,7 +369,7 @@ void playerMove(struct Katana katana) {
     currentGameData.player.location = newLocation;
 }
 
-void enemyMovemet(int enemyIndex) {
+void enemyMovement(int enemyIndex) {
     struct Enemy* currentEnemy = &currentGameData.enemies[enemyIndex];
 
     struct Vec2 newLocation;
@@ -364,22 +385,32 @@ void enemyMovemet(int enemyIndex) {
 
 /* Attacking */
 
-void attackEnemy(int enemyIndex, struct Katana katana) {
+void attackEnemy(int enemyIndex, struct Katana* katana) {
     double resistancePercent = 1.0;
-    if (katanaToTerrain[katana.type] == currentGameData.enemies[enemyIndex].type) {
+    if (katanaToTerrain[katana->type] == currentGameData.enemies[enemyIndex].type) {
         resistancePercent = ENEMY_RESISTANCE_PERCENT;
     } 
 
     double synergyPercent = 1.0;
-    if (katanaToTerrain[katana.type] == currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type) {
+    if (katanaToTerrain[katana->type] == currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type) {
         synergyPercent = TERRAIN_SYNERGY_PERCENT;
     } 
 
 
-    currentGameData.enemies[enemyIndex].health -= (katana.damage + myRand(katana.damageMod)) * resistancePercent * synergyPercent;
+    currentGameData.enemies[enemyIndex].health -= ((double) (katana->damage + myRand(katana->damageMod)) * resistancePercent * synergyPercent) * ((double) katana->sharpness / 100.0);
     if (currentGameData.enemies[enemyIndex].health <= 0) {
         removeEnemy(enemyIndex);
+        katana->numberOfKills++;
         genEnemy();
+    }
+
+    int temp = myRand(10);
+
+    if (temp > 5) {
+        katana->sharpness -= (temp - 5);
+    }
+    if (katana->sharpness < MIN_KATANA_SHARPNESS) {
+        katana->sharpness = MIN_KATANA_SHARPNESS;
     }
 }
 
@@ -455,6 +486,12 @@ void genKatana(struct Katana *katana) {
     katana->damageMod = fmax(dice(4,3) - 6, 0);
 
     katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
+
+    katana->sharpness = 100;
+
+    katana->numberOfMoves = 0;
+    katana->numberOfStrikes = 0;
+    katana->numberOfKills = 0;
 
     sprintf(katana->name, "%s%s", katanaNameType[katana->type], katanaNameDamage[katana->damage - 1]);
 
@@ -532,9 +569,9 @@ void pickUpFallenKatana() {
     struct Katana fallenKatana = currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].fallenKatana;
     printKatanaDescription(fallenKatana);
 
-    char buffer[40];
+    char buffer[60];
 
-    sprintf(buffer, "Select a katana to switch, \"%c\" to break it.", BREAK_KATANA_KEY);
+    sprintf(buffer, "Select a katana to switch, \"%c\" to break it for health.", BREAK_KATANA_KEY);
 
     update(buffer, false);
 
@@ -886,8 +923,11 @@ void printKatana(struct Katana katana, int position) {
 }
 
 void printKatanaDescription(struct Katana katana) {
-    printBox(1, 1, MAP_HEIGHT, MAP_WIDTH, " ");
+    char buffer[MAP_WIDTH];
+    char damageModBuffer[20];
 
+    printBox(1, 1, MAP_HEIGHT, MAP_WIDTH, " ");
+    
     attron(COLOR_PAIR(katanaColor[katana.type]));
 
     mvprintw(1, 1, katanaCornerIcon[katana.type]);
@@ -895,13 +935,12 @@ void printKatanaDescription(struct Katana katana) {
     mvprintw(MAP_HEIGHT, 1, katanaCornerIcon[katana.type]);
     mvprintw(MAP_HEIGHT, MAP_WIDTH, katanaCornerIcon[katana.type]);
 
+    sprintf(buffer, "%s (%s)", katana.name, katanaType[katana.type]);
 
-    mvprintw(1, (MAP_WIDTH/2) - (strlen(katana.name)/2), katana.name);
+
+    mvprintw(1, (MAP_WIDTH/2) - (strlen(buffer)/2), buffer);
 
     attrset(A_NORMAL);
-
-    char buffer[MAP_WIDTH];
-    char damageModBuffer[20];
 
     if (katana.damageMod != 0) {
         sprintf(damageModBuffer,"  Damage Mod: %i  ", katana.damageMod);
@@ -912,6 +951,20 @@ void printKatanaDescription(struct Katana katana) {
     sprintf(buffer,"Damage: %i  %s  Movement Type: %s", katana.damage, damageModBuffer, katanaMovementTypeNames[katana.movementType]);
 
     mvprintw(2, (MAP_WIDTH/2) - (strlen(buffer)/2), buffer);
+
+
+    sprintf(buffer, "Sharpness: %i", katana.sharpness);
+    mvprintw(4, 2, buffer);
+
+
+    sprintf(buffer, "Movement uses: %i", katana.numberOfMoves);
+    mvprintw(4, MAP_WIDTH - 20, buffer);
+
+    sprintf(buffer, "Strikes: %i", katana.numberOfStrikes);
+    mvprintw(5, MAP_WIDTH - 20, buffer);
+
+    sprintf(buffer, "Kills: %i", katana.numberOfKills);
+    mvprintw(6, MAP_WIDTH - 20, buffer);
 
 
     attron(COLOR_PAIR(katanaColor[katana.type]));

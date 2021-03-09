@@ -69,14 +69,15 @@
 #define KATANA_LIGHTNING  4
 #define KATANA_POSION     5
 
-#define NUMBER_OF_MOVEMENT_TYPES 6
+#define NUMBER_OF_MOVEMENT_TYPES 7
 
 #define MOVEMENT_STRIKE   0 /* Move to strongest enemy                        */
 #define MOVEMENT_BERSERK  1 /* Move to the closest enemy                      */
 #define MOVEMENT_RETREAT  2 /* Move away from the most enemies                */
 #define MOVEMENT_RETURN   3 /* Attempt to move to terrain maching katana type */
 #define MOVEMENT_DEFEND   4 /* Don't move                                     */
-#define MOVEMENT_RAND     5 /* Move in random direction                       */
+#define MOVEMENT_FALLEN   5 /* Attempt to move to closest fallen katana       */
+#define MOVEMENT_RAND     6 /* Move in random direction                       */
 
 
 #define NUMBER_OF_TERRAIN_TYPES 4
@@ -103,6 +104,8 @@
 
 #define MAX_NUMBER_OF_ENEMIES 20
 
+#define MIN_KATANA_SHARPNESS 25
+
 
 struct Vec2 {
     int y;
@@ -119,6 +122,14 @@ struct Katana {
     int damageMod;
 
     int movementType;
+
+    /* 100 - 0 */
+    int sharpness;
+
+
+    int numberOfMoves;
+    int numberOfStrikes;
+    int numberOfKills;
 
     char katanaImage[3][MAP_WIDTH];
 
@@ -273,7 +284,17 @@ const char katanaMovementTypeNames[NUMBER_OF_MOVEMENT_TYPES][10] = {
     "Retreat",
     "Return",
     "Defend",
+    "Fallen",
     "Random"
+};
+
+const char katanaType[NUMBER_OF_KATANA_TYPES][10] = {
+    "Fire",
+    "Ice",
+    "Wind",
+    "Stone",
+    "Lightning",
+    "Posion"
 };
 
 const char katanaNameType[NUMBER_OF_KATANA_TYPES][10] = {
@@ -348,10 +369,10 @@ double findDistanceToClosestEnemy(struct Vec2 location);             /* Function
 struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end);         /* Find next step from start to end   */
 bool findNearbyEnemies(int (*enemies)[8], int *number);              /* Find enemies adjacent to player    */
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
-void playerMove(struct Katana katana);                               /* Moves the player                   */
-void enemyMovemet(int enemyIndex);                                   /* Moves an enemy                     */
+void playerMove(struct Katana katana);                                /* Moves the player                  */
+void enemyMovement(int enemyIndex);                                   /* Moves an enemy                    */
 /*---- Attacking Functions --------------------------------------------------------------------------------*/
-void attackEnemy(int enemyIndex, struct Katana katana);              /* Attack an enemy                    */
+void attackEnemy(int enemyIndex, struct Katana* katana);             /* Attack an enemy                    */
 void attackPlayer(int enemyIndex);                                   /* Attack the player                  */
 /*---- Generator & Destructor Functions -------------------------------------------------------------------*/
 void genEnemy();                                                     /* Generate a random enemy            */
