@@ -139,6 +139,8 @@ struct Player {
     char name[50];
     int health;
 
+    int turnOfLastCombo;
+
     struct Vec2 location;
 
     struct Katana katanas[4];
@@ -167,6 +169,13 @@ struct Tile {
     struct Katana fallenKatana;
 };
 
+struct Combo {
+    int size;
+
+    /* [0]:type, [1]:location */
+    int combo[10][2];
+};
+
 struct GameData {
     struct Player player;
 
@@ -178,8 +187,8 @@ struct GameData {
 
     int turn;
 
-    /* [0]:type, [1]:location */
-    int previousMoves[HISTORY_LENGTH][2];
+    /* [0]:type, [1]:location, [2]:movement */
+    int previousMoves[HISTORY_LENGTH][3];
 
     int currentEnemyToAttack;
 };
@@ -240,7 +249,6 @@ const char enemyIcon[NUMBER_OF_ENEMY_TYPES * 2][2] = {
     "s",
     "f"
 };
-
 
 const char katanaCornerIcon[NUMBER_OF_KATANA_TYPES][2] = {
     "*", /* Fire      */
@@ -360,6 +368,16 @@ const char katanaBladeTipTypes[NUMBER_OF_KATANA_BLADE_TIP_TYPES][2] = {
     ":"
 };
 
+#define NUMBER_OF_UNIVERSAL_COMBOS 5
+struct Combo universalCombos[NUMBER_OF_UNIVERSAL_COMBOS] = {
+    {3, {{-1, 1}, {-1, 1}, {-1, 1}}},
+    {3, {{-1, 0}, {-1, 3}, {-1, 0}}},
+    {3, {{0, -1}, {1, -1}, {2, -1}}},
+    {4, {{-1, 0}, {-1, 0}, {-1, 1}, {-1, 1}}},
+    {4, {{-1, 2}, {-1, 2}, {-1, 3}, {-1, 3}}}
+};
+
+
 /*==== Forward Function Decleration =======================================================================*/
 void main();                                                         /* Main function                      */
 void gameLoop();                                                     /* Game loop which runs every turn    */
@@ -381,7 +399,10 @@ void genKatana(struct Katana *katana);                               /* Generate
 void genFallenKatana();                                              /* Generate a random fallen Katana    */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
+/*---- Combo Functions ------------------------------------------------------------------------------------*/
+int checkForCombo();                                                 /* Checks if combo has been executed  */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
+bool doesEnemyMoveThisTurn(int enemy);                               /* Do speed calculations of an enemy  */
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
 void replaceKatana(int slot, struct Katana katana);                  /* Replace katana with a new one      */
 void pickUpFallenKatana();                                           /* Pick up a fallen katana            */
@@ -389,7 +410,7 @@ void pickUpFallenKatana();                                           /* Pick up 
 int myRand(int number);                                              /* Same as rand(), but works with 0   */
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
 void printError(char* message, char* file, int line);                /* Error function used by ERROR()     */
-void pushPreviousMove(int type, int location);                       /* Push values to previousMoves       */
+void pushPreviousMove(int type, int location, int movement);         /* Push values to previousMoves       */
 void formatBlock(char* oldString, char* newString, int lineLength);  /* Format string for several lines    */
 void sliceIncertString(char* expression, char* incert, int location, int replacmentLen); /* Insert string  */
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/

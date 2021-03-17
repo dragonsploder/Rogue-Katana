@@ -29,13 +29,22 @@ void main(){
 
     currentGameData.turn = 0;
 
+    for (int i = 0; i <HISTORY_LENGTH; i++) {
+        currentGameData.previousMoves[i][0] = -1;
+        currentGameData.previousMoves[i][1] = -1;
+        currentGameData.previousMoves[i][2] = -1;
+    }
+
     strcpy(currentGameData.player.name, "Test");
     currentGameData.player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
     currentGameData.player.health = PLAYER_START_HEALTH;
+    currentGameData.player.turnOfLastCombo = 0;
     genKatana(&currentGameData.player.katanas[0]);
     genKatana(&currentGameData.player.katanas[1]);
     genKatana(&currentGameData.player.katanas[2]);
     genKatana(&currentGameData.player.katanas[3]);
+
+
 
 
     genMap();
@@ -117,7 +126,9 @@ void gameLoop() {
             if (selectedKatana != -1) {
                 int nearByEnemies[8];
                 int number;
-                if (findNearbyEnemies(&nearByEnemies, &number)) {
+
+                /* If enemy is nearby and a retreat move has not been used twice in a row */
+                if (findNearbyEnemies(&nearByEnemies, &number) && !(currentGameData.previousMoves[2][0] == MOVEMENT_RETREAT && currentGameData.player.katanas[selectedKatana].movementType == MOVEMENT_RETREAT)) {
                 
                     /* Right now attack lowest level enemy */
                     int lowestLevelIndex = 0;
@@ -138,12 +149,12 @@ void gameLoop() {
                     }
                     currentGameData.player.katanas[selectedKatana].numberOfMoves++;
                 }
-                pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana);
+                pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana, currentGameData.player.katanas[selectedKatana].movementType);
             }
             
             
             for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
-                if (currentGameData.turn - currentGameData.enemies[i].lastMovementTurn >= currentGameData.enemies[i].speed) {
+                if (doesEnemyMoveThisTurn(i)) {
                     if (findDistance(currentGameData.enemies[i].location, currentGameData.player.location) == 1) {
                         attackPlayer(i);
                     } else {
@@ -153,6 +164,14 @@ void gameLoop() {
             }
 
             currentGameData.turn++;
+        }
+
+        int temp = checkForCombo();
+
+        if(temp != -1){
+            char buffer[10];
+            sprintf(buffer, "combo %i", temp);
+            update(buffer, true);
         }
 
         clear();
@@ -427,7 +446,9 @@ void genEnemy() {
 
         currentEnemy->type = myRand(NUMBER_OF_ENEMY_TYPES);
 
-        currentEnemy->speed = abs(dice(3, 4) - 6);
+        //currentEnemy->speed = abs(dice(3, 4) - 6);
+        currentEnemy->speed = dice(2, 2);
+        //currentEnemy->speed = 4;
 
         currentEnemy->maxHeath = dice(4, 5);
         currentEnemy->health = currentEnemy->maxHeath;
@@ -551,7 +572,46 @@ void terrainAreaMap(int terrain, struct Vec2 location, int radius) {
     }
 }
 
+/* Combo Functions */
+int checkForCombo(){
+    for (int i = 0; i < NUMBER_OF_UNIVERSAL_COMBOS; i++) {
+        bool comboMach = true;
+        if (currentGameData.turn - currentGameData.player.turnOfLastCombo >= universalCombos[i].size){
+            for (int j = 0; j < universalCombos[i].size; j++) {
+                if (universalCombos[i].combo[j][0] != -1) {
+                    if (universalCombos[i].combo[j][0] != currentGameData.previousMoves[universalCombos[i].size - j - 1][0]) {
+                        comboMach = false;
+                    }
+                }
+                //printf("%i %i\n", universalCombos[i].combo[j][1], currentGameData.previousMoves[universalCombos[i].size - j - 1][1]);
+                if (universalCombos[i].combo[j][1] != -1) {
+                    if (universalCombos[i].combo[j][1] != currentGameData.previousMoves[universalCombos[i].size - j - 1][1]) {
+                        comboMach = false;
+                    }
+                }
+            }
+            //printf("\n");
+            if (comboMach){
+                currentGameData.player.turnOfLastCombo = currentGameData.turn;
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
 /* Misc Functions */
+bool doesEnemyMoveThisTurn(int enemy) {
+    bool enemyToMove;
+    if (currentGameData.enemies[enemy].speed < 3) {
+        enemyToMove = (currentGameData.turn % (5 - currentGameData.enemies[enemy].speed) != 0);
+    } else {
+        enemyToMove = (currentGameData.turn - currentGameData.enemies[enemy].lastMovementTurn >= (currentGameData.enemies[enemy].speed - 1));
+    }
+    //printf("Turn: %i, Speed: %i, Moved: %i\n", currentGameData.turn, currentGameData.enemies[enemy].speed, enemyToMove);
+    return enemyToMove;
+}
+
 bool checkForEnemy(struct Vec2 location) {
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
         if (currentGameData.enemies[i].location.y == location.y && currentGameData.enemies[i].location.x == location.x) {
@@ -633,13 +693,15 @@ void printError(char *message, char *file, int line) {
     exit(-1);
 } 
 
-void pushPreviousMove(int type, int location) {
-    for (int i = 0; i < HISTORY_LENGTH - 1; i++) {
+void pushPreviousMove(int type, int location, int movement) {
+    for (int i = HISTORY_LENGTH - 1; i >= 0; i--) {
         currentGameData.previousMoves[i + 1][0] = currentGameData.previousMoves[i][0];
         currentGameData.previousMoves[i + 1][1] = currentGameData.previousMoves[i][1];
+        currentGameData.previousMoves[i + 1][2] = currentGameData.previousMoves[i][2];
     }
     currentGameData.previousMoves[0][0] = type;
     currentGameData.previousMoves[0][1] = location;
+    currentGameData.previousMoves[0][2] = movement;
 }
 
 void sliceIncertString(char* expression, char* incert, int location, int replacmentLen){
@@ -936,8 +998,6 @@ void printKatanaDescription(struct Katana katana) {
     mvprintw(MAP_HEIGHT, MAP_WIDTH, katanaCornerIcon[katana.type]);
 
     sprintf(buffer, "%s (%s)", katana.name, katanaType[katana.type]);
-
-
     mvprintw(1, (MAP_WIDTH/2) - (strlen(buffer)/2), buffer);
 
     attrset(A_NORMAL);
