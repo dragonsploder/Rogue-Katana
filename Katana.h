@@ -104,6 +104,8 @@
 
 #define MAX_NUMBER_OF_ENEMIES 20
 
+#define MAX_NUMBER_OF_COMBOS 3
+
 #define MIN_KATANA_SHARPNESS 25
 
 
@@ -169,11 +171,23 @@ struct Tile {
     struct Katana fallenKatana;
 };
 
-struct Combo {
-    int size;
+struct ProtoCombo {
+    int action;
+    int length;
+    char title[10];
+    char description[50];
+};
 
-    /* [0]:type, [1]:location */
-    int combo[10][2];
+struct Combo {
+    int action;
+
+    int length;
+    int combo[10];
+
+    char title[10];
+    char description[50];
+
+    bool known;
 };
 
 struct GameData {
@@ -191,6 +205,9 @@ struct GameData {
     int previousMoves[HISTORY_LENGTH][3];
 
     int currentEnemyToAttack;
+
+    int currentNumberOfCombos;
+    struct Combo combos[MAX_NUMBER_OF_COMBOS];
 };
 
 /* Global Definitions */
@@ -368,13 +385,13 @@ const char katanaBladeTipTypes[NUMBER_OF_KATANA_BLADE_TIP_TYPES][2] = {
     ":"
 };
 
-#define NUMBER_OF_UNIVERSAL_COMBOS 5
-struct Combo universalCombos[NUMBER_OF_UNIVERSAL_COMBOS] = {
-    {3, {{-1, 1}, {-1, 1}, {-1, 1}}},
-    {3, {{-1, 0}, {-1, 3}, {-1, 0}}},
-    {3, {{0, -1}, {1, -1}, {2, -1}}},
-    {4, {{-1, 0}, {-1, 0}, {-1, 1}, {-1, 1}}},
-    {4, {{-1, 2}, {-1, 2}, {-1, 3}, {-1, 3}}}
+#define NUMBER_OF_PROTO_COMBOS 5
+struct ProtoCombo protoCombos[NUMBER_OF_PROTO_COMBOS] = {
+    {1, 5, "Discover", "Discover a combo"},
+    {2, 3, "Heal", "Gives a small health boost"},
+    {3, 3, "Terriform", "Randomly changes the terrain under your feet"},
+    {4, 4, "Freeze", "Freezes all enemies for two turns"},
+    {4, 3, "Swap", "Randomly swaps the location of two katanas"}
 };
 
 
@@ -399,8 +416,10 @@ void genKatana(struct Katana *katana);                               /* Generate
 void genFallenKatana();                                              /* Generate a random fallen Katana    */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
+void genCombo(struct ProtoCombo protoCombo);                         /* Generate a combo from a protocombo */
 /*---- Combo Functions ------------------------------------------------------------------------------------*/
 int checkForCombo();                                                 /* Checks if combo has been executed  */
+bool isViableCombo(struct Combo combo);                              /* Checks for combo conflict          */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
 bool doesEnemyMoveThisTurn(int enemy);                               /* Do speed calculations of an enemy  */
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
@@ -425,7 +444,7 @@ void update(char* message, bool pause);                              /* Print me
 void printBox(int y, int x, int stopY, int stopX, char* toPrint);    /* Print a filled in box              */ 
 void printBoarder(bool printMiddle);                                 /* Print boarder around screen        */
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */
-void printKatanaDescription(struct Katana katana);                   /* Print more in-depth katana info    */
+void printKatanaDescription(struct Katana katana, bool fallenKatana); /* Print more in-depth katana info   */
 void printMap();                                                     /* Print map at top of screen         */
 void printEntities();                                                /* Print player and enemies           */
 /*---- End of File ----------------------------------------------------------------------------------------*/

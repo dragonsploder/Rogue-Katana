@@ -24,10 +24,22 @@ void main(){
     long seed = time(NULL);
     srand(seed);
 
+    genCombo(protoCombos[0]);
+    genCombo(protoCombos[1]);
+    genCombo(protoCombos[3]);
+
+
+    printf("Combo1: %i,%i,%i,%i,%i\n", currentGameData.combos[0].combo[0], currentGameData.combos[0].combo[1], currentGameData.combos[0].combo[2], currentGameData.combos[0].combo[3], currentGameData.combos[0].combo[4]);
+    printf("Combo2: %i,%i,%i\n", currentGameData.combos[1].combo[0], currentGameData.combos[1].combo[1], currentGameData.combos[1].combo[2]);
+    printf("Combo4: %i,%i,%i,%i\n", currentGameData.combos[2].combo[0], currentGameData.combos[2].combo[1], currentGameData.combos[2].combo[2], currentGameData.combos[2].combo[3]);
+
+    ERROR("BYE");
+
     initCurses();
 
 
     currentGameData.turn = 0;
+    currentGameData.currentNumberOfCombos = 0;
 
     for (int i = 0; i <HISTORY_LENGTH; i++) {
         currentGameData.previousMoves[i][0] = -1;
@@ -43,6 +55,7 @@ void main(){
     genKatana(&currentGameData.player.katanas[1]);
     genKatana(&currentGameData.player.katanas[2]);
     genKatana(&currentGameData.player.katanas[3]);
+
 
 
 
@@ -184,7 +197,7 @@ void gameLoop() {
 
         if (infoKey) {
             if (selectedKatana != -1) {
-                printKatanaDescription(currentGameData.player.katanas[selectedKatana]);
+                printKatanaDescription(currentGameData.player.katanas[selectedKatana], false);
             } else if (command == HELP_KEY) {
                 clear();
                 for (int i = 0; i < NUMBER_OF_QUICK_HELP_LINES; i++) {
@@ -497,7 +510,7 @@ void removeEnemy(int enemyIndex) {
     currentGameData.currentNumberOfEnemies--;
 }
 
-void genKatana(struct Katana *katana) {
+void genKatana(struct Katana* katana) {
     katana->type = myRand(NUMBER_OF_KATANA_TYPES);
 
     /* 1 - 12 */
@@ -572,25 +585,35 @@ void terrainAreaMap(int terrain, struct Vec2 location, int radius) {
     }
 }
 
+void genCombo(struct ProtoCombo protoCombo) {
+    struct Combo combo;
+    combo.length = protoCombo.length;
+    combo.action = protoCombo.action;
+    strcpy(combo.description, protoCombo.description); 
+    strcpy(combo.title, protoCombo.title);
+
+    do {
+        for (int i = 0; i < combo.length; i++) {
+            combo.combo[i] = myRand(4);
+        }
+    } while (!isViableCombo(combo));
+
+    currentGameData.combos[currentGameData.currentNumberOfCombos] = combo;
+    currentGameData.currentNumberOfCombos++;
+}
+
 /* Combo Functions */
 int checkForCombo(){
-    for (int i = 0; i < NUMBER_OF_UNIVERSAL_COMBOS; i++) {
+    for (int i = 0; i < currentGameData.currentNumberOfCombos; i++) {
         bool comboMach = true;
-        if (currentGameData.turn - currentGameData.player.turnOfLastCombo >= universalCombos[i].size){
-            for (int j = 0; j < universalCombos[i].size; j++) {
-                if (universalCombos[i].combo[j][0] != -1) {
-                    if (universalCombos[i].combo[j][0] != currentGameData.previousMoves[universalCombos[i].size - j - 1][0]) {
-                        comboMach = false;
-                    }
-                }
-                //printf("%i %i\n", universalCombos[i].combo[j][1], currentGameData.previousMoves[universalCombos[i].size - j - 1][1]);
-                if (universalCombos[i].combo[j][1] != -1) {
-                    if (universalCombos[i].combo[j][1] != currentGameData.previousMoves[universalCombos[i].size - j - 1][1]) {
+        if (currentGameData.turn - currentGameData.player.turnOfLastCombo >= currentGameData.combos[i].length){
+            for (int j = 0; j < currentGameData.combos[i].length; j++) {
+                if (currentGameData.combos[i].combo[j] != -1) {
+                    if (currentGameData.combos[i].combo[j] != currentGameData.previousMoves[currentGameData.combos[i].length - j - 1][1]) {
                         comboMach = false;
                     }
                 }
             }
-            //printf("\n");
             if (comboMach){
                 currentGameData.player.turnOfLastCombo = currentGameData.turn;
                 return i;
@@ -600,6 +623,59 @@ int checkForCombo(){
     return -1;
 }
 
+
+bool isViableCombo(struct Combo combo) {
+    for (int i = 0; i < currentGameData.currentNumberOfCombos; i++) {
+        int comboLengthDifference = currentGameData.combos[i].length - combo.length;
+        if (comboLengthDifference > 0) { // New combo smaller
+            for (int j = 0; j < comboLengthDifference; j++) {
+                bool comboMach = true;
+                for (int k = 0; k < combo.length; k++) {
+                    if (combo.combo[k] != currentGameData.combos[i].combo[j + k]) {
+                        comboMach = false;
+                    }
+                }
+                if (comboMach) {
+                    return false;
+                }
+            }
+        } else if (comboLengthDifference < 0) { // New combo bigger
+            for (int j = 0; j < (-comboLengthDifference); j++) {
+                bool comboMach = true;
+                for (int k = 0; k < currentGameData.combos[i].length; k++) {
+                    if (currentGameData.combos[i].combo[k] != combo.combo[j + k]) {
+                        comboMach = false;
+                    }
+                }
+                if (comboMach) {
+                    return false;
+                }
+            }
+        } else { // Same len
+            bool comboMach = true;
+            for (int k = 0; k < combo.length; k++) {
+                if (combo.combo[k] != currentGameData.combos[i].combo[k]) {
+                    comboMach = false;
+                }
+            }
+            if (comboMach) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+
+void activateCombo(int comboIndex) {
+    switch (comboIndex) {
+        case 0: {/* Top left katana */
+
+            break;
+        }
+    }
+}
+ 
 /* Misc Functions */
 bool doesEnemyMoveThisTurn(int enemy) {
     bool enemyToMove;
@@ -627,7 +703,7 @@ void replaceKatana(int slot, struct Katana katana) {
 
 void pickUpFallenKatana() {
     struct Katana fallenKatana = currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].fallenKatana;
-    printKatanaDescription(fallenKatana);
+    printKatanaDescription(fallenKatana, true);
 
     char buffer[60];
 
@@ -984,7 +1060,7 @@ void printKatana(struct Katana katana, int position) {
     
 }
 
-void printKatanaDescription(struct Katana katana) {
+void printKatanaDescription(struct Katana katana, bool fallenKatana) {
     char buffer[MAP_WIDTH];
     char damageModBuffer[20];
 
@@ -1012,19 +1088,20 @@ void printKatanaDescription(struct Katana katana) {
 
     mvprintw(2, (MAP_WIDTH/2) - (strlen(buffer)/2), buffer);
 
+    if (!fallenKatana) {
+        sprintf(buffer, "Sharpness: %i", katana.sharpness);
+        mvprintw(4, 2, buffer);
 
-    sprintf(buffer, "Sharpness: %i", katana.sharpness);
-    mvprintw(4, 2, buffer);
 
+        sprintf(buffer, "Movement uses: %i", katana.numberOfMoves);
+        mvprintw(4, MAP_WIDTH - 20, buffer);
 
-    sprintf(buffer, "Movement uses: %i", katana.numberOfMoves);
-    mvprintw(4, MAP_WIDTH - 20, buffer);
+        sprintf(buffer, "Strikes: %i", katana.numberOfStrikes);
+        mvprintw(5, MAP_WIDTH - 20, buffer);
 
-    sprintf(buffer, "Strikes: %i", katana.numberOfStrikes);
-    mvprintw(5, MAP_WIDTH - 20, buffer);
-
-    sprintf(buffer, "Kills: %i", katana.numberOfKills);
-    mvprintw(6, MAP_WIDTH - 20, buffer);
+        sprintf(buffer, "Kills: %i", katana.numberOfKills);
+        mvprintw(6, MAP_WIDTH - 20, buffer);
+    }
 
 
     attron(COLOR_PAIR(katanaColor[katana.type]));
