@@ -28,6 +28,7 @@
 
 #define BREAK_KATANA_KEY     'b'
 #define HELP_KEY             'h'
+#define COMBO_REFERNCE_KEY   'c'
 
 /* Screen laylout def */
 #define SCREEN_HEIGHT 24
@@ -104,7 +105,7 @@
 
 #define MAX_NUMBER_OF_ENEMIES 20
 
-#define MAX_NUMBER_OF_COMBOS 3
+#define MAX_NUMBER_OF_COMBOS 10
 
 #define MIN_KATANA_SHARPNESS 25
 
@@ -206,8 +207,13 @@ struct GameData {
 
     int currentEnemyToAttack;
 
-    int currentNumberOfCombos;
+    int numberOfCombos;
     struct Combo combos[MAX_NUMBER_OF_COMBOS];
+
+    int currentNumberOfDiscoveredCombos;
+    int discoveredCombos[MAX_NUMBER_OF_COMBOS];
+
+    int turnsToFreeze;
 };
 
 /* Global Definitions */
@@ -233,6 +239,7 @@ const char quickHelpText[NUMBER_OF_QUICK_HELP_LINES][100] = {
 "                       Lowercase enemies are weaker                           ",
 "                      (!) represents a fallen katana                          "
 };
+
 
 const int enemyColor[NUMBER_OF_ENEMY_TYPES] = {
     COLOR_GREEN,  /* Basic  */
@@ -387,13 +394,19 @@ const char katanaBladeTipTypes[NUMBER_OF_KATANA_BLADE_TIP_TYPES][2] = {
 
 #define NUMBER_OF_PROTO_COMBOS 5
 struct ProtoCombo protoCombos[NUMBER_OF_PROTO_COMBOS] = {
-    {1, 5, "Discover", "Discover a combo"},
-    {2, 3, "Heal", "Gives a small health boost"},
-    {3, 3, "Terriform", "Randomly changes the terrain under your feet"},
-    {4, 4, "Freeze", "Freezes all enemies for two turns"},
+    {0, 5, "Discover", "Discover a combo"},
+    {1, 3, "Heal", "Gives a small health boost"},
+    {2, 3, "Terriform", "Randomly changes the terrain under your feet"},
+    {3, 4, "Freeze", "Freezes all enemies for two turns"},
     {4, 3, "Swap", "Randomly swaps the location of two katanas"}
 };
 
+const char comboLocationToText[4][4] = {
+    "TL-",
+    "TR-",
+    "BL-",
+    "BR-"
+};
 
 /*==== Forward Function Decleration =======================================================================*/
 void main();                                                         /* Main function                      */
@@ -420,6 +433,7 @@ void genCombo(struct ProtoCombo protoCombo);                         /* Generate
 /*---- Combo Functions ------------------------------------------------------------------------------------*/
 int checkForCombo();                                                 /* Checks if combo has been executed  */
 bool isViableCombo(struct Combo combo);                              /* Checks for combo conflict          */
+void activateCombo(int comboIndex);                                  /* Activate a combo                   */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
 bool doesEnemyMoveThisTurn(int enemy);                               /* Do speed calculations of an enemy  */
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
@@ -446,5 +460,7 @@ void printBoarder(bool printMiddle);                                 /* Print bo
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */
 void printKatanaDescription(struct Katana katana, bool fallenKatana); /* Print more in-depth katana info   */
 void printMap();                                                     /* Print map at top of screen         */
+void printHelp();                                                    /* Print out the help card            */
+void printComboReference();                                          /* Print out known combos             */
 void printEntities();                                                /* Print player and enemies           */
 /*---- End of File ----------------------------------------------------------------------------------------*/
