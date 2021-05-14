@@ -21,7 +21,8 @@
 
 
 void main(){
-    long seed = time(NULL);
+    //long seed = time(NULL);
+    long seed = 1;
     srand(seed);
 
     initCurses();
@@ -30,6 +31,7 @@ void main(){
     currentGameData.turn = 0;
     currentGameData.turnsToFreeze = 0;
     currentGameData.numberOfCombos = 0;
+    currentGameData.comboFlags = 0;
 
     for (int i = 0; i < HISTORY_LENGTH; i++) {
         currentGameData.previousMoves[i][0] = -1;
@@ -52,7 +54,7 @@ void main(){
     currentGameData.currentNumberOfDiscoveredCombos = 1;
     currentGameData.discoveredCombos[0] = 0;
 
-    int numberOfCombosInGame = 2 + myRand(2);
+    int numberOfCombosInGame = 5 + myRand(2);
     for (int i = 1; i < numberOfCombosInGame; i++) {
         int newCombo;
         bool alreadyCombo;
@@ -73,7 +75,7 @@ void main(){
     genMap();
 
     for (int i = 0; i < 10; i++) {
-        genEnemy();
+        //genEnemy();
         genFallenKatana();
     }
 
@@ -148,8 +150,18 @@ void gameLoop() {
                 validMove = false;
             }
         }
-        
+        mvprintw(30, 0, "1");
         if (validMove && !noActionCommand && !infoKey) {
+            enemyWave();
+            pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana, currentGameData.player.katanas[selectedKatana].movementType);
+
+
+            if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_SCARE_ENEMIES)) {
+                currentGameData.comboFlags ^= COMBO_FLAG_SCARE_ENEMIES;
+            }
+
+            activateCombo(checkForCombo());
+
             currentGameData.currentEnemyToAttack = -1;
             if (selectedKatana != -1) {
                 int nearByEnemies[8];
@@ -177,9 +189,8 @@ void gameLoop() {
                     }
                     currentGameData.player.katanas[selectedKatana].numberOfMoves++;
                 }
-                pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana, currentGameData.player.katanas[selectedKatana].movementType);
             }
-            
+             mvprintw(30, 0, "2");
             if (currentGameData.turnsToFreeze == 0) {
                 for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
                     if (doesEnemyMoveThisTurn(i)) {
@@ -196,9 +207,7 @@ void gameLoop() {
 
             currentGameData.turn++;
         }
-
-        activateCombo(checkForCombo());
-
+ mvprintw(30, 0, "3");
 
 
         clear();
@@ -208,6 +217,7 @@ void gameLoop() {
             printKatana(currentGameData.player.katanas[i], i);
         }
         printEntities();
+ mvprintw(30, 0, "4");
 
         if (infoKey) {
             if (selectedKatana != -1) {
@@ -220,6 +230,11 @@ void gameLoop() {
                 ERROR("Invalid info key");
             }
         }
+         mvprintw(30, 0, "5");
+        
+        //mvprintw(30, 0, "i:%i", currentGameData.currentWave.flags);
+        //mvprintw(26, 0, "Max:%i", currentGameData.numberOfCombos);
+        //mvprintw(27, 0, "Current:%i", currentGameData.currentNumberOfDiscoveredCombos);
 
         command = myGetch();
     } while (command != 'Q' && currentGameData.player.health > 0);
@@ -245,22 +260,22 @@ double findDistanceToClosestEnemy(struct Vec2 location) {
     return closestEnemyDistance;
 }
 
-struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end) {
+struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse) {
     struct Vec2 step = start;
 
     if (abs(end.x - start.x) < MAP_HEIGHT) {
         if (end.y > start.y) {
-            step.y += 1;
+            step.y += inverse?-1:1;
         } else if (end.y < start.y) {
-            step.y -= 1;
+            step.y += inverse?1:-1;
         }
     }
 
     if (abs(end.y - start.y) < MAP_WIDTH) {
         if (end.x > start.x) {
-            step.x += 1;
+            step.x += inverse?-1:1;
         } else if (end.x < start.x) {
-            step.x -= 1;
+            step.x += inverse?1:-1;
         }
     }
 
@@ -295,7 +310,7 @@ void playerMove(struct Katana katana) {
                     strongestEnemy = i;
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[strongestEnemy].location);
+            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[strongestEnemy].location, false);
             break;
         }
 
@@ -309,7 +324,7 @@ void playerMove(struct Katana katana) {
                     closestEnemyDistance = currentEnemyDistance;
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[closestEnemy].location);
+            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[closestEnemy].location, false);
             break;
         }
         
@@ -370,7 +385,7 @@ void playerMove(struct Katana katana) {
                     }
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, closestTerrain);
+            newLocation = pathFinding(currentGameData.player.location, closestTerrain, false);
             break;
         }
         
@@ -393,7 +408,7 @@ void playerMove(struct Katana katana) {
                     }
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, closestFallenKatana);
+            newLocation = pathFinding(currentGameData.player.location, closestFallenKatana, false);
             break;
         }
         
@@ -419,8 +434,15 @@ void enemyMovement(int enemyIndex) {
     struct Enemy* currentEnemy = &currentGameData.enemies[enemyIndex];
 
     struct Vec2 newLocation;
-    
-    newLocation = pathFinding(currentEnemy->location, currentGameData.player.location);
+
+    if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_SCARE_ENEMIES)) {
+        newLocation = pathFinding(currentEnemy->location, currentGameData.player.location, true);
+    } else {
+        newLocation = pathFinding(currentEnemy->location, currentGameData.player.location, false);
+    }
+
+
+
     if (checkForEnemy(newLocation) == false) {
 
         currentEnemy->location = newLocation;
@@ -437,17 +459,32 @@ void attackEnemy(int enemyIndex, struct Katana* katana) {
         resistancePercent = ENEMY_RESISTANCE_PERCENT;
     } 
 
+    if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_FORCE_ATTACK)) {
+        resistancePercent = 1.0;
+        currentGameData.comboFlags ^= COMBO_FLAG_FORCE_ATTACK;
+    } 
+
+
     double synergyPercent = 1.0;
     if (katanaToTerrain[katana->type] == currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type) {
         synergyPercent = TERRAIN_SYNERGY_PERCENT;
     } 
 
 
-    currentGameData.enemies[enemyIndex].health -= ((double) (katana->damage + myRand(katana->damageMod)) * resistancePercent * synergyPercent) * ((double) katana->sharpness / 100.0);
+
+
+    double damage = ((double) (katana->damage + myRand(katana->damageMod)) * resistancePercent * synergyPercent) * ((double) katana->sharpness / 100.0);
+
+    if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_DOUBLE_ATTACK)) {
+        damage *= 2;
+        currentGameData.comboFlags ^= COMBO_FLAG_DOUBLE_ATTACK;
+    } 
+
+
+    currentGameData.enemies[enemyIndex].health -= damage;
     if (currentGameData.enemies[enemyIndex].health <= 0) {
         removeEnemy(enemyIndex);
         katana->numberOfKills++;
-        genEnemy();
     }
 
     int temp = myRand(10);
@@ -467,11 +504,12 @@ void attackPlayer(int enemyIndex) {
 
 /* Generators & Destructors */
 
-void genEnemy() {
+void genEnemy(int type, int sideLocation) {
     if (currentGameData.currentNumberOfEnemies < MAX_NUMBER_OF_ENEMIES) {
         struct Enemy *currentEnemy = &currentGameData.enemies[currentGameData.currentNumberOfEnemies];
 
-        currentEnemy->type = myRand(NUMBER_OF_ENEMY_TYPES);
+        //currentEnemy->type = myRand(NUMBER_OF_ENEMY_TYPES);
+        currentEnemy->type = type;
 
         //currentEnemy->speed = abs(dice(3, 4) - 6);
         currentEnemy->speed = dice(2, 2);
@@ -485,7 +523,8 @@ void genEnemy() {
 
         struct Vec2 location = (struct Vec2) {0, 0};
         do {
-            switch (myRand(4)) {
+            //switch (myRand(4)) {
+            switch (sideLocation) {
                 case 0: {/* Right */
                     location.y = myRand(MAP_HEIGHT);
                     location.x = 0;
@@ -507,7 +546,7 @@ void genEnemy() {
                     break;
                 }
                 default: {
-                    ERROR("myRand has failed me");
+                    ERROR("Invalid location input");
                 }
             }
         } while (checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location) < 8);
@@ -616,6 +655,57 @@ void genCombo(struct ProtoCombo protoCombo) {
     currentGameData.numberOfCombos++;
 }
 
+void genWave(struct Wave* wave) {
+    int baseEnemise = 5;
+    int additionEnemise = 5;
+    wave->difficulty = (int) (currentGameData.turn / 100) + 1;
+
+    int flag1 = pow(2, myRand(4));
+    int flag2 = pow(2, myRand(4));
+    int flag3 = pow(2, myRand(4));
+    int flag4 = pow(2, myRand(4));
+
+    wave->flags = flag1 + (flag2 << 4) + (flag3 << 8) + (flag4 << 12);
+
+    if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_ONE_TYPE)) {
+        wave->enemiesToSpawn[myRand(4)] = wave->difficulty * (myRand(5) + 5);
+    } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_TWO_TYPES)) {
+        int typeOne = myRand(4);
+        int typeTwo;
+        do {
+            typeTwo = myRand(4);
+        } while (typeOne == typeTwo);
+
+        wave->enemiesToSpawn[typeOne] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[typeTwo] = wave->difficulty * (myRand(5) + 5);
+
+    } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_THREE_TYPES)) {
+        int typeOne = myRand(4);
+        int typeTwo;
+        int typeThree;
+        do {
+            typeTwo = myRand(4);
+        } while (typeOne == typeTwo);
+
+        do {
+            typeThree = myRand(4);
+        } while (typeThree == typeOne || typeThree == typeTwo);
+
+        wave->enemiesToSpawn[typeOne] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[typeTwo] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[typeThree] = wave->difficulty * (myRand(5) + 5);
+    } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ALL_TYPES)) {
+        wave->enemiesToSpawn[0] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[1] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[2] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[3] = wave->difficulty * (myRand(5) + 5);
+    } else {
+        ERROR("Wave flag bit error");
+    }
+
+    //wave->enemiesToSpawn = (difficulty) * 2 + myRand(difficulty * 3);
+}
+
 /* Combo Functions */
 int checkForCombo(){
     for (int i = 0; i < currentGameData.numberOfCombos; i++) {
@@ -640,7 +730,7 @@ bool isViableCombo(struct Combo combo) {
     for (int i = 0; i < currentGameData.numberOfCombos; i++) {
         int comboLengthDifference = currentGameData.combos[i].length - combo.length;
         if (comboLengthDifference > 0) { // New combo smaller
-            for (int j = 0; j < comboLengthDifference; j++) {
+            for (int j = 0; j < comboLengthDifference + 1; j++) {
                 bool comboMach = true;
                 for (int k = 0; k < combo.length; k++) {
                     if (combo.combo[k] != currentGameData.combos[i].combo[j + k]) {
@@ -652,7 +742,7 @@ bool isViableCombo(struct Combo combo) {
                 }
             }
         } else if (comboLengthDifference < 0) { // New combo bigger
-            for (int j = 0; j < (-comboLengthDifference); j++) {
+            for (int j = 0; j < (-comboLengthDifference) + 1; j++) {
                 bool comboMach = true;
                 for (int k = 0; k < currentGameData.combos[i].length; k++) {
                     if (currentGameData.combos[i].combo[k] != combo.combo[j + k]) {
@@ -680,12 +770,12 @@ bool isViableCombo(struct Combo combo) {
 
 
 void activateCombo(int comboIndex) {
-    switch (comboIndex) {
-        case -1: { /* No combo */
-            return;
-        }
+    if (comboIndex == -1) {
+        return;
+    }
+    switch (currentGameData.combos[comboIndex].action) {
         case 0: { /* Discover */
-            if (currentGameData.numberOfCombos != currentGameData.currentNumberOfDiscoveredCombos) { 
+            if (currentGameData.numberOfCombos > currentGameData.currentNumberOfDiscoveredCombos) { 
                 int discoveredCombo;
                 bool beenDiscovered;
                 do {
@@ -715,7 +805,21 @@ void activateCombo(int comboIndex) {
             break;
         }
 
-        case 2: { /* Swap */
+        case 2: { /* Terriform */
+            int newTerrain;
+            do {
+                newTerrain = myRand(NUMBER_OF_TERRAIN_TYPES);
+            } while (currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type == newTerrain);
+            currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type = newTerrain;
+            break;
+        }
+        
+        case 3: { /* Freeze */
+            currentGameData.turnsToFreeze = 2;
+            break;
+        }
+
+        case 4: { /* Swap */
             int firstKatana = myRand(4);
             int secondKatana;
             do {
@@ -727,20 +831,33 @@ void activateCombo(int comboIndex) {
             currentGameData.player.katanas[secondKatana] = temp;
             break;
         }
-        
-        case 3: { /* Freeze */
-            currentGameData.turnsToFreeze = 2;
+
+        case 5: { /* Boost */
+            currentGameData.comboFlags = (currentGameData.comboFlags | COMBO_FLAG_DOUBLE_ATTACK);
             break;
         }
 
-        case 4: { /* Terriform */
-            int newTerrain;
+        case 6: { /* Teleport */
+            struct Vec2 newLocation;
             do {
-                newTerrain = myRand(NUMBER_OF_TERRAIN_TYPES);
-            } while (currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type == newTerrain);
-            currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type = newTerrain;
+                newLocation.y = myRand(MAP_HEIGHT);
+                newLocation.x = myRand(MAP_WIDTH);
+            } while(findDistance(currentGameData.player.location, newLocation) < 5 || findDistanceToClosestEnemy(newLocation) == 0 || currentGameData.map[newLocation.y][newLocation.x].hasFallenKatana);
+
+            currentGameData.player.location = newLocation;
             break;
         }
+
+        case 7: { /* Force */
+            currentGameData.comboFlags = (currentGameData.comboFlags | COMBO_FLAG_FORCE_ATTACK);
+            break;
+        }
+
+        case 8: { /* Scare */
+            currentGameData.comboFlags = (currentGameData.comboFlags | COMBO_FLAG_SCARE_ENEMIES);
+            break;
+        }
+        
 
 
         default: {
@@ -834,6 +951,98 @@ void pickUpFallenKatana() {
     } while(!validAction);
 
     currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].hasFallenKatana = false;
+}
+
+
+void enemyWave() {
+    if (currentGameData.currentNumberOfEnemies == 0) {
+        genWave(&currentGameData.currentWave);
+    }
+
+
+    int totalEnemies = 0 ;
+    for (int i = 0; i < NUMBER_OF_ENEMY_TYPES; i++) {
+        totalEnemies += currentGameData.currentWave.enemiesToSpawn[i];
+    }
+    
+    if (totalEnemies == 0) {
+        return;
+    }
+
+
+    int turnDelay;
+    if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_2_TURN_DELAY)) {
+        turnDelay = 2;
+    } else if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_5_TURN_DELAY)) {
+        turnDelay = 5;
+    } else if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_7_TURN_DELAY)) {
+        turnDelay = 7;
+    } else if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_10_TURN_DELAY)) {
+        turnDelay = 10;
+    }
+
+    if (currentGameData.turnOfLastEnemySpawn + turnDelay < currentGameData.turn) {
+        currentGameData.turnOfLastEnemySpawn = currentGameData.turn;
+
+        int numberOfEnemiesToSpawn;
+
+        if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_ALL_AT_ONCE)) {
+            numberOfEnemiesToSpawn = totalEnemies;
+        } else if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_ONE_AT_A_TIME)) {
+            numberOfEnemiesToSpawn = 1;
+        } else if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_TWO_AT_A_TIME)) {
+            numberOfEnemiesToSpawn = 2;
+        } else if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_RAND_AT_A_TIME)) {
+            numberOfEnemiesToSpawn = 1 + myRand(4);
+        } else {
+            ERROR("Wave flag bit error");
+        }
+
+        while (numberOfEnemiesToSpawn > totalEnemies) {
+            numberOfEnemiesToSpawn--;
+        } 
+
+        int locations[4] = {-1, -1, -1, -1};
+
+        locations[0] = myRand(4);
+        if (!CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_ONE_SIDE_SPAWN)) {
+            do {
+                locations[1] = myRand(4);
+            } while (locations[0] == locations[1]);
+        }
+        if (!CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_ONE_SIDE_SPAWN) && !CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_TWO_SIDES_SPAWN)) {
+            do {
+                locations[2] = myRand(4);
+            } while (locations[0] == locations[2] || locations[1] == locations[2]);
+        }
+        if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_FOUR_SIDES_SPAWN)) {
+            do {
+                locations[3] = myRand(4);
+            } while (locations[0] == locations[3] || locations[1] == locations[3] || locations[2] == locations[3]);
+        }
+
+        if (locations[0] + locations[1] + locations[2] + locations[3] == -4) {
+            ERROR("Wave flag bit error");
+        }
+
+        for (int i = 0; i < numberOfEnemiesToSpawn; i++) {
+            int type;
+            do {
+                type = myRand(NUMBER_OF_ENEMY_TYPES);
+            } while (currentGameData.currentWave.enemiesToSpawn[type] == 0);
+
+            int location;
+            do {
+                location = myRand(4);
+            } while (locations[location] == -1); 
+
+
+            genEnemy(type, locations[location]);
+
+            currentGameData.currentWave.enemiesToSpawn[type]--;
+        }
+
+    }
 }
 
 /* Utility Functions */
@@ -997,17 +1206,16 @@ void update(char* message, bool pause){
         strncpy(secondaryBuffer, &formatedMessage[i * messageLineLength], messageLineLength);
         secondaryBuffer[messageLineLength] = '\0';
         if (i != linesNeeded - 1) {
-            sprintf(mainBuffer, "%s -cont- (space)", secondaryBuffer);
+            sprintf(mainBuffer, "%s -cont- (exit)", secondaryBuffer);
         } else if (pause) {
-            sprintf(mainBuffer, "%s (space)", secondaryBuffer);
+            sprintf(mainBuffer, "%s (exit)", secondaryBuffer);
         } else {
             sprintf(mainBuffer, "%s", secondaryBuffer);
         }
         if (pause) {
-            do {
-                printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
-                mvprintw(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (strlen(mainBuffer) / 2), mainBuffer);
-            } while(myGetch() != ' ');
+            printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
+            mvprintw(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (strlen(mainBuffer) / 2), mainBuffer);
+            myGetch();
         } else {
             printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
             mvprintw(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (strlen(mainBuffer) / 2), mainBuffer);
@@ -1242,9 +1450,11 @@ void printComboReference(){
 
         for (int j = 0; j < currentGameData.combos[currentGameData.discoveredCombos[i]].length; j++) {
             if (j < currentGameData.combos[currentGameData.discoveredCombos[i]].length - 1) {
-                strcat(buffer, comboLocationToText[currentGameData.combos[currentGameData.discoveredCombos[i]].combo[j]]);
+                buffer[j * 2] = comboLocationToText[currentGameData.combos[currentGameData.discoveredCombos[i]].combo[j]];
+                buffer[j * 2 + 1] = '-';
             } else {
-                strncat(buffer, comboLocationToText[currentGameData.combos[currentGameData.discoveredCombos[i]].combo[j]], 2);
+                buffer[j * 2] = comboLocationToText[currentGameData.combos[currentGameData.discoveredCombos[i]].combo[j]];
+                buffer[j * 2 + 1] = '\0';
             }
         }
 

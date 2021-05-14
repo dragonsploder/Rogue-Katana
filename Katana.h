@@ -103,12 +103,44 @@
 
 #define KATANA_MAX_DAMAGE 12
 
-#define MAX_NUMBER_OF_ENEMIES 20
+#define MAX_NUMBER_OF_ENEMIES 50
 
 #define MAX_NUMBER_OF_COMBOS 10
 
 #define MIN_KATANA_SHARPNESS 25
 
+
+
+#define CHECK_BIT(var, mask) ((mask & var) == mask)
+
+
+
+#define COMBO_FLAG_DOUBLE_ATTACK    0b0000000000000001
+#define COMBO_FLAG_FORCE_ATTACK     0b0000000000000010
+#define COMBO_FLAG_SCARE_ENEMIES    0b0000000000000100
+
+
+
+
+#define WAVE_FLAG_ALL_AT_ONCE       0b0000000000000001
+#define WAVE_FLAG_ONE_AT_A_TIME     0b0000000000000010
+#define WAVE_FLAG_TWO_AT_A_TIME     0b0000000000000100
+#define WAVE_FLAG_RAND_AT_A_TIME    0b0000000000001000
+
+#define WAVE_FLAG_ONLY_ONE_TYPE     0b0000000000010000
+#define WAVE_FLAG_ONLY_TWO_TYPES    0b0000000000100000
+#define WAVE_FLAG_ONLY_THREE_TYPES  0b0000000001000000
+#define WAVE_FLAG_ALL_TYPES         0b0000000010000000
+
+#define WAVE_FLAG_2_TURN_DELAY      0b0000000100000000
+#define WAVE_FLAG_5_TURN_DELAY      0b0000001000000000
+#define WAVE_FLAG_7_TURN_DELAY      0b0000010000000000
+#define WAVE_FLAG_10_TURN_DELAY     0b0000100000000000
+ 
+#define WAVE_FLAG_ONE_SIDE_SPAWN    0b0001000000000000
+#define WAVE_FLAG_TWO_SIDES_SPAWN   0b0010000000000000
+#define WAVE_FLAG_THREE_SIDES_SPAWN 0b0100000000000000
+#define WAVE_FLAG_FOUR_SIDES_SPAWN  0b1000000000000000
 
 struct Vec2 {
     int y;
@@ -175,7 +207,7 @@ struct Tile {
 struct ProtoCombo {
     int action;
     int length;
-    char title[10];
+    char title[12];
     char description[50];
 };
 
@@ -185,10 +217,18 @@ struct Combo {
     int length;
     int combo[10];
 
-    char title[10];
+    char title[12];
     char description[50];
 
     bool known;
+};
+
+struct Wave {
+    int difficulty;
+
+    unsigned short flags;
+
+    int enemiesToSpawn[4];
 };
 
 struct GameData {
@@ -214,6 +254,11 @@ struct GameData {
     int discoveredCombos[MAX_NUMBER_OF_COMBOS];
 
     int turnsToFreeze;
+
+    unsigned short comboFlags;
+
+    struct Wave currentWave;
+    int turnOfLastEnemySpawn;
 };
 
 /* Global Definitions */
@@ -392,20 +437,32 @@ const char katanaBladeTipTypes[NUMBER_OF_KATANA_BLADE_TIP_TYPES][2] = {
     ":"
 };
 
-#define NUMBER_OF_PROTO_COMBOS 5
+#define NUMBER_OF_PROTO_COMBOS 9
 struct ProtoCombo protoCombos[NUMBER_OF_PROTO_COMBOS] = {
-    {0, 5, "Discover", "Discover a combo"},
+    {0, 2, "Discover", "Discover a combo"},
     {1, 3, "Heal", "Gives a small health boost"},
-    {2, 3, "Terriform", "Randomly changes the terrain under your feet"},
-    {3, 4, "Freeze", "Freezes all enemies for two turns"},
-    {4, 3, "Swap", "Randomly swaps the location of two katanas"}
+    {2, 2, "Terriform", "Randomly changes the terrain under your feet"},
+    {3, 4, "Freeze", "Freezes all enemies for 2 turns"},
+    {4, 3, "Swap", "Randomly swaps the location of 2 katanas"},
+    {5, 3, "Boost", "Double the damage of your next attack"},
+    {6, 4, "Teleport", "Teleport to a random location"},
+    {7, 3, "Force", "Force your next attack to ignore enemy resistance"},
+    {8, 4, "Scare", "Scare enemies into taking a step back"},
 };
 
+/*
 const char comboLocationToText[4][4] = {
     "TL-",
     "TR-",
     "BL-",
     "BR-"
+};*/
+
+const char comboLocationToText[4] = {
+    TOP_LEFT_KATANA,
+    TOP_RIGHT_KATANA,
+    BOTTOM_LEFT_KATANA,
+    BOTTOM_RIGHT_KATANA
 };
 
 /*==== Forward Function Decleration =======================================================================*/
@@ -414,22 +471,23 @@ void gameLoop();                                                     /* Game loo
 /*---- Find Functions -------------------------------------------------------------------------------------*/
 double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance between two points        */
 double findDistanceToClosestEnemy(struct Vec2 location);             /* Function used in retreat movement  */
-struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end);         /* Find next step from start to end   */
+struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse); /* Next step from start to end  */
 bool findNearbyEnemies(int (*enemies)[8], int *number);              /* Find enemies adjacent to player    */
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
-void playerMove(struct Katana katana);                                /* Moves the player                  */
-void enemyMovement(int enemyIndex);                                   /* Moves an enemy                    */
+void playerMove(struct Katana katana);                               /* Moves the player                   */
+void enemyMovement(int enemyIndex);                                  /* Moves an enemy                     */
 /*---- Attacking Functions --------------------------------------------------------------------------------*/
 void attackEnemy(int enemyIndex, struct Katana* katana);             /* Attack an enemy                    */
 void attackPlayer(int enemyIndex);                                   /* Attack the player                  */
 /*---- Generator & Destructor Functions -------------------------------------------------------------------*/
-void genEnemy();                                                     /* Generate a random enemy            */
+void genEnemy(int type, int sideLocation);                               /* Generate a random enemy            */
 void removeEnemy(int enemyIndex);                                    /* Removes an enemy                   */
 void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
 void genFallenKatana();                                              /* Generate a random fallen Katana    */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
 void genCombo(struct ProtoCombo protoCombo);                         /* Generate a combo from a protocombo */
+void genWave(struct Wave* wave);                                     /* Generate random enemy wave         */
 /*---- Combo Functions ------------------------------------------------------------------------------------*/
 int checkForCombo();                                                 /* Checks if combo has been executed  */
 bool isViableCombo(struct Combo combo);                              /* Checks for combo conflict          */
@@ -439,6 +497,7 @@ bool doesEnemyMoveThisTurn(int enemy);                               /* Do speed
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
 void replaceKatana(int slot, struct Katana katana);                  /* Replace katana with a new one      */
 void pickUpFallenKatana();                                           /* Pick up a fallen katana            */
+void enemyWave();                                                    /* Manage the current wave            */
 /*---- Utility Functions ----------------------------------------------------------------------------------*/
 int myRand(int number);                                              /* Same as rand(), but works with 0   */
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
