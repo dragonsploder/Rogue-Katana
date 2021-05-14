@@ -21,8 +21,8 @@
 
 
 void main(){
-    //long seed = time(NULL);
-    long seed = 1;
+    long seed = time(NULL);
+    //long seed = 1;
     srand(seed);
 
     initCurses();
@@ -32,6 +32,7 @@ void main(){
     currentGameData.turnsToFreeze = 0;
     currentGameData.numberOfCombos = 0;
     currentGameData.comboFlags = 0;
+    currentGameData.lastEnemyInfoIndex = 0;
 
     for (int i = 0; i < HISTORY_LENGTH; i++) {
         currentGameData.previousMoves[i][0] = -1;
@@ -39,7 +40,7 @@ void main(){
         currentGameData.previousMoves[i][2] = -1;
     }
 
-    strcpy(currentGameData.player.name, "Test");
+    strcpy(currentGameData.player.name, "Tanjiro"); // Gotta have that Demon Slayer reference
     currentGameData.player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
     currentGameData.player.health = PLAYER_START_HEALTH;
     currentGameData.player.turnOfLastCombo = 0;
@@ -146,11 +147,16 @@ void gameLoop() {
                 break;
             }
 
+            case ENEMY_CHECK_KEY: {
+                infoKey = true;
+                break;
+            }
+
             default: {
                 validMove = false;
             }
         }
-        mvprintw(30, 0, "1");
+
         if (validMove && !noActionCommand && !infoKey) {
             enemyWave();
             pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana, currentGameData.player.katanas[selectedKatana].movementType);
@@ -190,7 +196,7 @@ void gameLoop() {
                     currentGameData.player.katanas[selectedKatana].numberOfMoves++;
                 }
             }
-             mvprintw(30, 0, "2");
+
             if (currentGameData.turnsToFreeze == 0) {
                 for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
                     if (doesEnemyMoveThisTurn(i)) {
@@ -207,8 +213,6 @@ void gameLoop() {
 
             currentGameData.turn++;
         }
- mvprintw(30, 0, "3");
-
 
         clear();
         printBoarder(true);
@@ -217,7 +221,6 @@ void gameLoop() {
             printKatana(currentGameData.player.katanas[i], i);
         }
         printEntities();
- mvprintw(30, 0, "4");
 
         if (infoKey) {
             if (selectedKatana != -1) {
@@ -226,11 +229,12 @@ void gameLoop() {
                 printHelp();
             } else if (command == COMBO_REFERNCE_KEY) {
                 printComboReference();
+            } else if (command == ENEMY_CHECK_KEY) {
+                printEnemyInfo();
             } else {
                 ERROR("Invalid info key");
             }
         }
-         mvprintw(30, 0, "5");
         
         //mvprintw(30, 0, "i:%i", currentGameData.currentWave.flags);
         //mvprintw(26, 0, "Max:%i", currentGameData.numberOfCombos);
@@ -245,6 +249,19 @@ void gameLoop() {
 
 double findDistance(struct Vec2 start, struct Vec2 end) {
     return fmax(abs(end.y - start.y), abs(end.x - start.x));
+}
+
+int findClosestEnemy(){
+    int closestEnemy = 0;
+    int closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
+    for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
+        int currentEnemyDistance = findDistance(currentGameData.player.location, currentGameData.enemies[i].location);
+        if (currentEnemyDistance < closestEnemyDistance) {
+            closestEnemy = i;
+            closestEnemyDistance = currentEnemyDistance;
+        }
+    }
+    return closestEnemy;
 }
 
 double findDistanceToClosestEnemy(struct Vec2 location) {
@@ -1439,7 +1456,7 @@ void printHelp() {
     printBoarder(false);
 }
 
-void printComboReference(){
+void printComboReference() {
     clear();
 
     mvprintw(2, (MAP_WIDTH / 2) - 6, "Known combos:");
@@ -1467,7 +1484,31 @@ void printComboReference(){
     
 }
 
-void printEntities(){
+void printEnemyInfo() {
+    
+    int closestEnemy = findClosestEnemy();
+
+    char buffer[50];
+
+    sprintf(buffer, "Hp:%i Lv:%i", currentGameData.enemies[closestEnemy].health, currentGameData.enemies[closestEnemy].level);
+    if (currentGameData.currentNumberOfEnemies == 0) {
+        strcpy(buffer, "You see no enemies");
+    } else {
+        attron(A_STANDOUT);
+        attron(COLOR_PAIR(enemyColor[currentGameData.enemies[closestEnemy].type]));
+        if (currentGameData.enemies[closestEnemy].level > 100) {
+            mvprintw(currentGameData.enemies[closestEnemy].location.y + 1, currentGameData.enemies[closestEnemy].location.x + 1, enemyIcon[currentGameData.enemies[closestEnemy].type]);
+        } else {
+            mvprintw(currentGameData.enemies[closestEnemy].location.y + 1, currentGameData.enemies[closestEnemy].location.x + 1, enemyIcon[currentGameData.enemies[closestEnemy].type + NUMBER_OF_ENEMY_TYPES]);
+        }
+        attrset(A_NORMAL);
+    }
+    printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
+    mvprintw(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (strlen(buffer) / 2), buffer);
+
+}
+
+void printEntities() {
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
         attron(COLOR_PAIR(enemyColor[currentGameData.enemies[i].type]));
         if (currentGameData.enemies[i].level > 100) {

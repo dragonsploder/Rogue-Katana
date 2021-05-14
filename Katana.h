@@ -29,6 +29,7 @@
 #define BREAK_KATANA_KEY     'b'
 #define HELP_KEY             'h'
 #define COMBO_REFERNCE_KEY   'c'
+#define ENEMY_CHECK_KEY      ';'
 
 /* Screen laylout def */
 #define SCREEN_HEIGHT 24
@@ -259,6 +260,8 @@ struct GameData {
 
     struct Wave currentWave;
     int turnOfLastEnemySpawn;
+
+    int lastEnemyInfoIndex;
 };
 
 /* Global Definitions */
@@ -470,6 +473,7 @@ void main();                                                         /* Main fun
 void gameLoop();                                                     /* Game loop which runs every turn    */
 /*---- Find Functions -------------------------------------------------------------------------------------*/
 double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance between two points        */
+int findClosestEnemy();                                              /* Return index of the closest enemy  */
 double findDistanceToClosestEnemy(struct Vec2 location);             /* Function used in retreat movement  */
 struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse); /* Next step from start to end  */
 bool findNearbyEnemies(int (*enemies)[8], int *number);              /* Find enemies adjacent to player    */
@@ -521,5 +525,6 @@ void printKatanaDescription(struct Katana katana, bool fallenKatana); /* Print m
 void printMap();                                                     /* Print map at top of screen         */
 void printHelp();                                                    /* Print out the help card            */
 void printComboReference();                                          /* Print out known combos             */
+void printEnemyInfo();                                               /* Info of the closest enemy          */
 void printEntities();                                                /* Print player and enemies           */
 /*---- End of File ----------------------------------------------------------------------------------------*/
