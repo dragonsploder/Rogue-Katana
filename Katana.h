@@ -30,6 +30,13 @@
 #define HELP_KEY             'h'
 #define COMBO_REFERNCE_KEY   'c'
 #define ENEMY_CHECK_KEY      ';'
+#define QUIT_KEY             'Q'
+
+#define ACCEPT_KEY       KEY_ENTER
+#define UP_ARROW_KEY     KEY_UP
+#define DOWN_ARROW_KEY   KEY_DOWN
+#define LEFT_ARROW_KEY   KEY_LEFT
+#define RIGHT_ARROW_KEY  KEY_RIGHT
 
 /* Screen laylout def */
 #define SCREEN_HEIGHT 24
@@ -54,8 +61,11 @@
 #endif
 */
 
-#undef KEY_ENTER
-#define KEY_ENTER  10
+#undef  KEY_BACKSPACE
+#define KEY_BACKSPACE 8
+#undef  KEY_ENTER
+#define KEY_ENTER     10
+#define KEY_ESC       27
 
 #define PLAYER_START_HEALTH  100
 
@@ -261,31 +271,52 @@ struct GameData {
     struct Wave currentWave;
     int turnOfLastEnemySpawn;
 
-    int lastEnemyInfoIndex;
+
+    int saveCheck;
 };
 
 /* Global Definitions */
 struct GameData currentGameData;
 
+#define NUMBER_OF_TITLE_CARD_LINES 8
+const char titleCard[NUMBER_OF_TITLE_CARD_LINES][100] = {
+    "                                              ",
+    "     _   __  ___ _____ ___   _   _   ___      ",
+    "    | | / / / _ \\_   _/ _ \\ | \\ | | / _ \\     ",
+    "    | |/ / / /_\\ \\| |/ /_\\ \\|  \\| |/ /_\\ \\    ",
+    "    |    \\ |  _  || ||  _  ||     ||  _  |    ",
+    "    | |\\  \\| | | || || | | || |\\  || | | |    ",
+    "    \\_| \\_/\\_| |_/\\_/\\_| |_/\\_| \\_/\\_| |_/    ",
+    "                                              "
+};
+
+#define NUMBER_OF_MENU_OPTIONS 4
+char menuOptions[NUMBER_OF_MENU_OPTIONS][50] = {
+    "New Game ",
+    "Load Game",
+    "Options  ",
+    "Quit     "
+};
+
 #define NUMBER_OF_QUICK_HELP_LINES 17
 const char quickHelpText[NUMBER_OF_QUICK_HELP_LINES][100] = {
-"   Katana Types (icon):    Terrain types (icon):    Enemy Types (icon):       ",
-"       Fire        (*)         Grass        (.)        Basic       (B)        ",
-"       Ice         (+)         Water        (~)        Energy      (E)        ",
-"       Wind        (=)         Rock         (*)        Strong      (S)        ",
-"       Stone       (o)         Magma        (^)        Fluid       (F)        ",
-"       Lightning   (^)                                                        ",
-"       Posion      (~)                                                        ",
-"                                                                              ",
-"    Fire       works better on  Magma  but worse against  Energy  enemies     ",
-"    Ice        works better on  Water  but worse against  Fluid   enemies     ",
-"    Wind       works better on  Rock   but worse against  Strong  enemies     ",
-"    Stone      works better on  Rock   but worse against  Strong  enemies     ",
-"    Lightning  works better on  Magma  but worse against  Energy  enemies     ",
-"    Posion     works better on  Water  but worse against  Fluid   enemies     ",
-"                                                                              ",
-"                       Lowercase enemies are weaker                           ",
-"                      (!) represents a fallen katana                          "
+    "   Katana Types (icon):    Terrain types (icon):    Enemy Types (icon):       ",
+    "       Fire        (*)         Grass        (.)        Basic       (B)        ",
+    "       Ice         (+)         Water        (~)        Energy      (E)        ",
+    "       Wind        (=)         Rock         (*)        Strong      (S)        ",
+    "       Stone       (o)         Magma        (^)        Fluid       (F)        ",
+    "       Lightning   (^)                                                        ",
+    "       Posion      (~)                                                        ",
+    "                                                                              ",
+    "    Fire       works better on  Magma  but worse against  Energy  enemies     ",
+    "    Ice        works better on  Water  but worse against  Fluid   enemies     ",
+    "    Wind       works better on  Rock   but worse against  Strong  enemies     ",
+    "    Stone      works better on  Rock   but worse against  Strong  enemies     ",
+    "    Lightning  works better on  Magma  but worse against  Energy  enemies     ",
+    "    Posion     works better on  Water  but worse against  Fluid   enemies     ",
+    "                                                                              ",
+    "                       Lowercase enemies are weaker                           ",
+    "                      (!) represents a fallen katana                          "
 };
 
 
@@ -470,6 +501,7 @@ const char comboLocationToText[4] = {
 
 /*==== Forward Function Decleration =======================================================================*/
 void main();                                                         /* Main function                      */
+void mainMenu();                                                     /* Handels main menu screen           */
 void gameLoop();                                                     /* Game loop which runs every turn    */
 /*---- Find Functions -------------------------------------------------------------------------------------*/
 double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance between two points        */
@@ -484,7 +516,7 @@ void enemyMovement(int enemyIndex);                                  /* Moves an
 void attackEnemy(int enemyIndex, struct Katana* katana);             /* Attack an enemy                    */
 void attackPlayer(int enemyIndex);                                   /* Attack the player                  */
 /*---- Generator & Destructor Functions -------------------------------------------------------------------*/
-void genEnemy(int type, int sideLocation);                               /* Generate a random enemy            */
+void genEnemy(int type, int sideLocation);                           /* Generate a random enemy            */
 void removeEnemy(int enemyIndex);                                    /* Removes an enemy                   */
 void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
 void genFallenKatana();                                              /* Generate a random fallen Katana    */
@@ -497,11 +529,15 @@ int checkForCombo();                                                 /* Checks i
 bool isViableCombo(struct Combo combo);                              /* Checks for combo conflict          */
 void activateCombo(int comboIndex);                                  /* Activate a combo                   */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
+int getStringInput(int y, int x, bool center, char* buffer);         /* Get string from player             */
 bool doesEnemyMoveThisTurn(int enemy);                               /* Do speed calculations of an enemy  */
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
 void replaceKatana(int slot, struct Katana katana);                  /* Replace katana with a new one      */
 void pickUpFallenKatana();                                           /* Pick up a fallen katana            */
 void enemyWave();                                                    /* Manage the current wave            */
+int menu(char options[][50], int numberOfOptions, int yOffset, int xOffset); /* Menu function              */
+void saveGame(FILE* fileToSaveTo);                                   /* Save current game to file          */
+int loadGame(FILE* fileToLoadFrom);                                  /* Load a game from a file            */
 /*---- Utility Functions ----------------------------------------------------------------------------------*/
 int myRand(int number);                                              /* Same as rand(), but works with 0   */
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
@@ -509,6 +545,8 @@ void printError(char* message, char* file, int line);                /* Error fu
 void pushPreviousMove(int type, int location, int movement);         /* Push values to previousMoves       */
 void formatBlock(char* oldString, char* newString, int lineLength);  /* Format string for several lines    */
 void sliceIncertString(char* expression, char* incert, int location, int replacmentLen); /* Insert string  */
+FILE* writeFile(char* filePath);                                     /* Create writable file stream        */
+FILE* readFile(char* filePath);                                      /* Open readable file stream          */
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/
 void initCurses();                                                   /* Initalise Curses library           */
 void initColor();                                                    /* Initalise color for Curses         */
@@ -527,4 +565,5 @@ void printHelp();                                                    /* Print ou
 void printComboReference();                                          /* Print out known combos             */
 void printEnemyInfo();                                               /* Info of the closest enemy          */
 void printEntities();                                                /* Print player and enemies           */
+void printTilecard();                                                /* Print titlecard for main menu      */
 /*---- End of File ----------------------------------------------------------------------------------------*/

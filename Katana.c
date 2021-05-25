@@ -15,6 +15,7 @@
 #include <time.h>            /* Functions for date and time                                                */
 #include <string.h>          /* Functions for string manipulation                                          */
 #include <math.h>            /* General math functions                                                     */
+#include <unistd.h>          /* Misc                                                                       */
 #include <pdcurses/curses.h> /* Libraray for terminal manipulation                                         */
 #include "Katana.h"          /* Katana variables, arrays and structures                                    */
 /*---- Main Function --------------------------------------------------------------------------------------*/
@@ -32,7 +33,8 @@ void main(){
     currentGameData.turnsToFreeze = 0;
     currentGameData.numberOfCombos = 0;
     currentGameData.comboFlags = 0;
-    currentGameData.lastEnemyInfoIndex = 0;
+
+    currentGameData.saveCheck = 572;
 
     for (int i = 0; i < HISTORY_LENGTH; i++) {
         currentGameData.previousMoves[i][0] = -1;
@@ -80,9 +82,41 @@ void main(){
         genFallenKatana();
     }
 
-    gameLoop();
-
+    mainMenu();
     stopCurses();
+}
+
+void mainMenu(){
+    printBoarder(false);
+    printTilecard();
+
+    int choice = menu(menuOptions, NUMBER_OF_MENU_OPTIONS, NUMBER_OF_TITLE_CARD_LINES + 2, (SCREEN_WIDTH/2) - (strlen(menuOptions[0])/2));
+
+    switch (choice) {
+        case 0: {
+            gameLoop();
+            break;
+        }
+
+        case 1: {
+            char buffer[100];
+            clearScreen();
+            do {
+                mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter valid filepath");
+                if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+                    mainMenu();
+                    return;
+                }
+
+                mvprintw(MAP_HEIGHT/2 + 4, (MAP_WIDTH/2) - 14, "File is not valid save file");
+            } while (loadGame(readFile(buffer)) != 1);
+
+            clearScreen();
+
+            gameLoop();
+            break;
+        }
+    }
 }
 
 void gameLoop() {
@@ -241,7 +275,18 @@ void gameLoop() {
         //mvprintw(27, 0, "Current:%i", currentGameData.currentNumberOfDiscoveredCombos);
 
         command = myGetch();
-    } while (command != 'Q' && currentGameData.player.health > 0);
+    } while (command != QUIT_KEY && currentGameData.player.health > 0);
+
+    char buffer[100];
+
+    clearScreen();
+    mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter save filename");
+    
+    if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+        return;
+    }
+
+    saveGame(writeFile(buffer));
 }
 
 /* Find functions */
@@ -903,6 +948,94 @@ void activateCombo(int comboIndex) {
 }
  
 /* Misc Functions */
+int getStringInput(int y, int x, bool center, char* buffer) {
+    int input;
+
+    buffer[0] = ' ';
+    buffer[1] = '\0';
+
+    int currentCharIndex = 0;
+    int currentBufferSize = 1;
+
+    do {
+        printHorizontalLine((MAP_HEIGHT/2) + 1, 0, MAP_WIDTH, " ");
+        if (center) {
+            mvprintw(y, (MAP_WIDTH/2) - (strlen(buffer)/2), "%s", buffer);
+            attrset(A_STANDOUT);
+            mvprintw(y, (MAP_WIDTH/2) - (strlen(buffer)/2) + currentCharIndex, "%c", buffer[currentCharIndex]);
+            attrset(A_NORMAL);
+        } else {
+            mvprintw(y, x, "%s", buffer);
+            attrset(A_STANDOUT);
+            mvprintw(y, x + currentCharIndex, "%c", buffer[currentCharIndex]);
+            attrset(A_NORMAL);
+        }
+
+        input = myGetch();
+
+
+        switch(input) {
+            case KEY_ESC: {
+                return -1;
+            }
+
+            case ACCEPT_KEY: {
+                break;
+            }
+
+            case LEFT_ARROW_KEY: {
+                currentCharIndex--;
+                break;
+            }
+
+            case RIGHT_ARROW_KEY: {
+                currentCharIndex++;
+                break;
+            }
+
+            case KEY_BACKSPACE: {
+                if (currentCharIndex == 0) {
+                    break;
+                }
+
+                for (int i = currentCharIndex - 1; i < currentBufferSize - 1; i++){
+                    buffer[i] = buffer[i + 1];
+                }
+
+                currentBufferSize--;
+                currentCharIndex--;
+                break;
+            }
+
+
+            default: {
+                for (int i = currentBufferSize; i > currentCharIndex; i--){
+                    buffer[i] = buffer[i - 1];
+                }
+
+                buffer[currentCharIndex] = input;
+
+                currentBufferSize++;
+                currentCharIndex++;
+                break;
+            }
+        }
+
+        if (currentCharIndex < 0) {
+            currentCharIndex = 0;
+        } else if (currentCharIndex >= currentBufferSize) {
+            currentCharIndex = currentBufferSize - 1;
+        }
+
+        buffer[currentBufferSize] = '\0';
+
+    } while(input != ACCEPT_KEY);
+    buffer[currentBufferSize - 1] = '\0';
+
+    return 1;
+}
+
+
 bool doesEnemyMoveThisTurn(int enemy) {
     bool enemyToMove;
     if (currentGameData.enemies[enemy].speed < 3) {
@@ -1062,6 +1195,98 @@ void enemyWave() {
     }
 }
 
+
+int menu(char options[][50], int numberOfOptions, int yOffset, int xOffset) {
+    int currentSelection = 0;
+
+
+    attron(COLOR_PAIR(COLOR_WHITE));
+    attrset(A_NORMAL);
+
+    while (true) {
+
+        for (int i = 0; i < numberOfOptions; i++) {
+            if (currentSelection == i) {
+                attron(A_STANDOUT);
+            }
+            mvprintw(i + yOffset, xOffset, "%s", options[i]);
+            attrset(A_NORMAL);
+        }
+
+        int input = myGetch();
+
+        switch (input) {
+            case UP_ARROW_KEY:
+                currentSelection--;
+                break;
+            
+            case DOWN_ARROW_KEY:
+                currentSelection++;
+                break;
+
+            case ACCEPT_KEY:
+                return currentSelection;
+
+            case QUIT_KEY:
+                return -1;
+
+            default:
+                break;
+        }
+        
+        if (currentSelection < 0) {
+            currentSelection = 0;
+        } else if (currentSelection >= numberOfOptions) {
+            currentSelection = numberOfOptions - 1;
+        }
+
+    }
+}
+/*
+void saveGame(FILE* fileToSaveTo) {
+    if (fileToSaveTo != NULL) {
+        fwrite(&currentGameData, sizeof(struct GameData), 1, fileToSaveTo);
+        fclose(fileToSaveTo);
+    } else {
+        ERROR("fileToSaveTo is NULL");
+    }
+}
+
+int loadGame(FILE* fileToLoadFrom) {
+    if (fileToLoadFrom != NULL) {
+        fread(&currentGameData, sizeof(struct GameData), 1, fileToLoadFrom);
+        fclose(fileToLoadFrom);
+    } else {
+        ERROR("fileToLoadFrom is NULL");
+    }
+
+    if (currentGameData.saveCheck != 572) {
+        return -1;
+    }
+
+    return 1; 
+    
+}
+*/
+
+void saveGame(FILE* fileToSaveTo) {
+    fwrite(&currentGameData, sizeof(struct GameData), 1, fileToSaveTo);
+    fclose(fileToSaveTo);
+}
+
+int loadGame(FILE* fileToLoadFrom) {
+    currentGameData.saveCheck = 0;
+    fread(&currentGameData, sizeof(struct GameData), 1, fileToLoadFrom);
+    fclose(fileToLoadFrom);
+
+    if (currentGameData.saveCheck != 572) {
+        return -1;
+    }
+
+    return 1; 
+    
+}
+
 /* Utility Functions */
 int myRand(int number) {
     if (number > 0) {
@@ -1133,6 +1358,17 @@ void formatBlock(char* oldString, char* newString, int lineLength) {
     }
     newString[stringLength + offset] = '\0';
 }
+
+FILE* writeFile(char* filePath) {
+    FILE* file = fopen(filePath, "wb");
+    return file;
+}
+
+FILE* readFile(char* filePath) {
+    FILE* file = fopen(filePath, "rb");
+    return file;
+}
+
 
 /* Curses IO Functions */
 
@@ -1521,4 +1757,13 @@ void printEntities() {
     attron(COLOR_PAIR(COLOR_WHITE));
     mvprintw(currentGameData.player.location.y + 1, currentGameData.player.location.x + 1, "@");
     attrset(A_NORMAL);
+}
+
+void printTilecard(){
+    int start = (SCREEN_WIDTH/2) - (strlen(titleCard[0])/2);
+
+    attrset(COLOR_PAIR(COLOR_WHITE));
+    for (int i = 0; i < NUMBER_OF_TITLE_CARD_LINES; i++) {
+        mvprintw(1 + i, start, "%s", titleCard[i]);
+    }
 }
