@@ -23,7 +23,6 @@
 
 void main(){
     long seed = time(NULL);
-    //long seed = 1;
     srand(seed);
 
     initCurses();
@@ -53,7 +52,7 @@ void main(){
 
 
 
-    genCombo(protoCombos[0]);
+    genCombo(0);
     currentGameData.currentNumberOfDiscoveredCombos = 1;
     currentGameData.discoveredCombos[0] = 0;
 
@@ -71,7 +70,7 @@ void main(){
             }
         } while (alreadyCombo);
 
-        genCombo(protoCombos[newCombo]);
+        genCombo(newCombo);
     }
 
 
@@ -276,17 +275,22 @@ void gameLoop() {
 
         command = myGetch();
     } while (command != QUIT_KEY && currentGameData.player.health > 0);
-
-    char buffer[100];
-
-    clearScreen();
-    mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter save filename");
     
-    if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
-        return;
-    }
+    clearScreen();
+    if (currentGameData.player.health > 0) {
+        char buffer[100];
 
-    saveGame(writeFile(buffer));
+        mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter save filename");
+        
+        if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+            return;
+        }
+
+        saveGame(writeFile(buffer));
+    } else {
+        mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 3, "Death");
+        myGetch();
+    }
 }
 
 /* Find functions */
@@ -584,7 +588,11 @@ void genEnemy(int type, int sideLocation) {
 
 
         struct Vec2 location = (struct Vec2) {0, 0};
+
+        // Simple way to avoid infinate loop
+        int tests = 50;
         do {
+            tests--;
             //switch (myRand(4)) {
             switch (sideLocation) {
                 case 0: {/* Right */
@@ -611,7 +619,7 @@ void genEnemy(int type, int sideLocation) {
                     ERROR("Invalid location input");
                 }
             }
-        } while (checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location) < 8);
+        } while ((checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location) < 8) && tests > 0);
 
         currentEnemy->location = location;
         currentGameData.currentNumberOfEnemies++;
@@ -700,12 +708,11 @@ void terrainAreaMap(int terrain, struct Vec2 location, int radius) {
     }
 }
 
-void genCombo(struct ProtoCombo protoCombo) {
+void genCombo(int protoCombo) {
     struct Combo combo;
-    combo.length = protoCombo.length;
-    combo.action = protoCombo.action;
-    strcpy(combo.description, protoCombo.description); 
-    strcpy(combo.title, protoCombo.title);
+    combo.length = protoCombos[protoCombo].length;
+    combo.action = protoCombos[protoCombo].action;
+    combo.infoIndex = protoCombo;
 
     do {
         for (int i = 0; i < combo.length; i++) {
@@ -937,9 +944,9 @@ void activateCombo(int comboIndex) {
     char buffer[50];
 
     if (beenDiscovered) {
-        sprintf(buffer, "%s combo activated", currentGameData.combos[comboIndex].title);
+        sprintf(buffer, "%s combo activated", protoCombos[currentGameData.combos[comboIndex].infoIndex].title);
     } else {
-        sprintf(buffer, "%s combo discovered", currentGameData.combos[comboIndex].title);
+        sprintf(buffer, "%s combo discovered", protoCombos[currentGameData.combos[comboIndex].infoIndex].title);
         currentGameData.discoveredCombos[currentGameData.currentNumberOfDiscoveredCombos] = comboIndex;
         currentGameData.currentNumberOfDiscoveredCombos++;
     }
@@ -1697,7 +1704,7 @@ void printComboReference() {
 
     mvprintw(2, (MAP_WIDTH / 2) - 6, "Known combos:");
     for (int i = 0; i < currentGameData.currentNumberOfDiscoveredCombos; i++) {
-        mvprintw((i * 2) + 4, 4, "%s", currentGameData.combos[currentGameData.discoveredCombos[i]].title);
+        mvprintw((i * 2) + 4, 4, "%s", protoCombos[currentGameData.combos[currentGameData.discoveredCombos[i]].infoIndex].title);
 
         char buffer[MAP_WIDTH] = "";
 
@@ -1713,7 +1720,7 @@ void printComboReference() {
 
         mvprintw((i * 2) + 4, MAP_WIDTH - 4 - strlen(buffer), "%s", buffer);
 
-        mvprintw((i * 2) + 5, 8, currentGameData.combos[currentGameData.discoveredCombos[i]].description);
+        mvprintw((i * 2) + 5, 8, protoCombos[currentGameData.combos[currentGameData.discoveredCombos[i]].infoIndex].description);
     }
 
     printBoarder(false);

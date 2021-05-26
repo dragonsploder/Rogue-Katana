@@ -159,7 +159,7 @@ struct Vec2 {
 };
 
 struct Katana {
-    char name[30];
+    char name[20];
     int type;
 
     /* 1 - 12 */
@@ -182,7 +182,7 @@ struct Katana {
 };
 
 struct Player {
-    char name[50];
+    char name[20];
     int health;
 
     int turnOfLastCombo;
@@ -228,8 +228,7 @@ struct Combo {
     int length;
     int combo[10];
 
-    char title[12];
-    char description[50];
+    int infoIndex;
 
     bool known;
 };
@@ -522,7 +521,7 @@ void genKatana(struct Katana *katana);                               /* Generate
 void genFallenKatana();                                              /* Generate a random fallen Katana    */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
-void genCombo(struct ProtoCombo protoCombo);                         /* Generate a combo from a protocombo */
+void genCombo(int protoCombo);                                       /* Generate a combo from a protoCombo */
 void genWave(struct Wave* wave);                                     /* Generate random enemy wave         */
 /*---- Combo Functions ------------------------------------------------------------------------------------*/
 int checkForCombo();                                                 /* Checks if combo has been executed  */
