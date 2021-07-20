@@ -27,7 +27,7 @@ void main(){
 
     initCurses();
 
-
+    currentGameData.score = 0;
     currentGameData.turn = 0;
     currentGameData.turnsToFreeze = 0;
     currentGameData.numberOfCombos = 0;
@@ -185,6 +185,11 @@ void gameLoop() {
                 break;
             }
 
+            case PLAYER_DATA_KEY: {
+                infoKey = true;
+                break;
+            }
+
             default: {
                 validMove = false;
             }
@@ -264,6 +269,8 @@ void gameLoop() {
                 printComboReference();
             } else if (command == ENEMY_CHECK_KEY) {
                 printEnemyInfo();
+            } else if (command == PLAYER_DATA_KEY) {
+                printPlayerData();
             } else {
                 ERROR("Invalid info key");
             }
@@ -288,8 +295,13 @@ void gameLoop() {
 
         saveGame(writeFile(buffer));
     } else {
+
+
         mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 3, "Death");
         myGetch();
+
+        saveScore();
+        printScoresFromScoresFile();
     }
 }
 
@@ -627,6 +639,8 @@ void genEnemy(int type, int sideLocation) {
 }
 
 void removeEnemy(int enemyIndex) {
+    currentGameData.score += (int) ((float) currentGameData.enemies[enemyIndex].level * ( (float) currentGameData.turn / 100.0)); 
+
     for (int i = enemyIndex; i < currentGameData.currentNumberOfEnemies - 1; i++) {
         currentGameData.enemies[i] = currentGameData.enemies[i + 1];
     }
@@ -1294,6 +1308,14 @@ int loadGame(FILE* fileToLoadFrom) {
     
 }
 
+void saveScore() {
+    FILE* scoresFile;
+
+    scoresFile = fopen("Scores","a");
+    fprintf(scoresFile,"%s - %i\n", currentGameData.player.name, currentGameData.score);
+    fclose(scoresFile);
+}
+
 /* Utility Functions */
 int myRand(int number) {
     if (number > 0) {
@@ -1691,6 +1713,19 @@ void printMap() {
     attrset(A_NORMAL);
 }
 
+void printPlayerData() {
+    char buffer[MAP_WIDTH];
+    printBox(1, 1, MAP_HEIGHT, MAP_WIDTH, " ");
+
+    mvprintw(2, (MAP_WIDTH/2) - (strlen(currentGameData.player.name)/2), "%s", currentGameData.player.name);
+
+    sprintf(buffer, "%i", currentGameData.score);
+    mvprintw(3, (int) ((MAP_WIDTH * 0.5) - (strlen(buffer)/2)), "%s", buffer);
+
+    mvprintw(5, (int) (MAP_WIDTH * 0.25), "Hp:%i", currentGameData.player.health);
+    mvprintw(5, (int) (MAP_WIDTH * 0.75), "Turn:%i", currentGameData.turn);
+}
+
 void printHelp() {
     clear();
     for (int i = 0; i < NUMBER_OF_QUICK_HELP_LINES; i++) {
@@ -1773,4 +1808,55 @@ void printTilecard(){
     for (int i = 0; i < NUMBER_OF_TITLE_CARD_LINES; i++) {
         mvprintw(1 + i, start, "%s", titleCard[i]);
     }
+}
+
+void printScoresFromScoresFile() {
+    int scoresValue[100];
+
+    char scores[100][50];
+
+    FILE* scoresFile;
+    char* line = NULL;
+    int lineNumber = 0;
+    size_t length = 0;
+    ssize_t read;
+
+    scoresFile = fopen("Scores","r");
+
+    while ((read = getline(&line, &length, scoresFile)) != -1) {
+        
+        //scoresName[lineNumber] = strtok(line, " - ");
+        //strcpy(&scoresName[lineNumber][0], strtok(line, " - "));
+        strcpy(&scores[lineNumber][0], line);
+        strtok(line, " - ");
+        scoresValue[lineNumber] = atoi(strtok(NULL, " - "));
+        lineNumber++;
+
+        if (lineNumber > 100) {
+            ERROR("Play something else");
+        }
+    }
+
+    int highestScore = 0;
+    int highestScoreIndex = 0;
+    char buffer[50];
+
+    for (int i = 0; i < lineNumber; i++) {
+        printf("%i\n", scoresValue[i]);
+    }
+
+
+    for (int i = 0; i < lineNumber; i++) {
+        for (int j = 0; j < lineNumber; j++) {
+            if (scoresValue[j] > highestScore) {
+                highestScore = scoresValue[j];
+                highestScoreIndex = j;
+            }
+        }
+        mvprintw(i + 1, (MAP_WIDTH/2 - strlen(scores[highestScoreIndex])/2), "%s", scores[highestScoreIndex]);
+        scoresValue[highestScoreIndex] = 0;
+        highestScore = 0;
+    }
+    getch();
+
 }

@@ -31,6 +31,7 @@
 #define COMBO_REFERNCE_KEY   'c'
 #define ENEMY_CHECK_KEY      ';'
 #define QUIT_KEY             'Q'
+#define PLAYER_DATA_KEY      '@'
 
 #define ACCEPT_KEY       KEY_ENTER
 #define UP_ARROW_KEY     KEY_UP
@@ -243,6 +244,7 @@ struct Wave {
 
 struct GameData {
     struct Player player;
+    int score;
 
     int currentNumberOfEnemies;
     struct Enemy enemies[MAX_NUMBER_OF_ENEMIES];
@@ -537,6 +539,7 @@ void enemyWave();                                                    /* Manage t
 int menu(char options[][50], int numberOfOptions, int yOffset, int xOffset); /* Menu function              */
 void saveGame(FILE* fileToSaveTo);                                   /* Save current game to file          */
 int loadGame(FILE* fileToLoadFrom);                                  /* Load a game from a file            */
+void saveScore();                                                    /* Save game score to "Scores" file   */
 /*---- Utility Functions ----------------------------------------------------------------------------------*/
 int myRand(int number);                                              /* Same as rand(), but works with 0   */
 int dice(int number, int sides);                                     /* DnD style dice rolls               */
@@ -559,10 +562,12 @@ void printBox(int y, int x, int stopY, int stopX, char* toPrint);    /* Print a 
 void printBoarder(bool printMiddle);                                 /* Print boarder around screen        */
 void printKatana(struct Katana katana, int position);                /* Print katana info                  */
 void printKatanaDescription(struct Katana katana, bool fallenKatana); /* Print more in-depth katana info   */
+void printPlayerData();                                              /* Print out exact info on the player */
 void printMap();                                                     /* Print map at top of screen         */
 void printHelp();                                                    /* Print out the help card            */
 void printComboReference();                                          /* Print out known combos             */
 void printEnemyInfo();                                               /* Info of the closest enemy          */
 void printEntities();                                                /* Print player and enemies           */
 void printTilecard();                                                /* Print titlecard for main menu      */
+void printScoresFromScoresFile();                                    /* Print ordered list of scores       */
 /*---- End of File ----------------------------------------------------------------------------------------*/
