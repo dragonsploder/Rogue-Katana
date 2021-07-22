@@ -13,7 +13,13 @@
 #include <time.h>
 
 
-#define ERROR(x) printError(#x,__FILE__, __LINE__)
+/* Screen laylout def */
+#define SCREEN_HEIGHT 24
+#define SCREEN_WIDTH 80
+
+
+#define MAP_HEIGHT (SCREEN_HEIGHT/3 - 1)
+#define MAP_WIDTH (SCREEN_WIDTH - 2)
 
 /* Controls */
 #define TOP_LEFT_KATANA      'u'
@@ -39,15 +45,6 @@
 #define LEFT_ARROW_KEY   KEY_LEFT
 #define RIGHT_ARROW_KEY  KEY_RIGHT
 
-/* Screen laylout def */
-#define SCREEN_HEIGHT 24
-#define SCREEN_WIDTH 80
-
-
-#define MAP_HEIGHT (SCREEN_HEIGHT/3 - 1)
-#define MAP_WIDTH (SCREEN_WIDTH - 2)
-
-
 // Uncomment if using VS code cmd terminal
 /*
 #if defined(_WIN32)
@@ -68,13 +65,9 @@
 #define KEY_ENTER     10
 #define KEY_ESC       27
 
-#define PLAYER_START_HEALTH  100
 
-#define HISTORY_LENGTH 50
-
-
+/* Struct Info */
 #define NUMBER_OF_KATANA_TYPES  6
-
 #define KATANA_FIRE       0
 #define KATANA_ICE        1
 #define KATANA_WIND       2
@@ -83,7 +76,6 @@
 #define KATANA_POSION     5
 
 #define NUMBER_OF_MOVEMENT_TYPES 7
-
 #define MOVEMENT_STRIKE   0 /* Move to strongest enemy                        */
 #define MOVEMENT_BERSERK  1 /* Move to the closest enemy                      */
 #define MOVEMENT_RETREAT  2 /* Move away from the most enemies                */
@@ -92,46 +84,68 @@
 #define MOVEMENT_FALLEN   5 /* Attempt to move to closest fallen katana       */
 #define MOVEMENT_RAND     6 /* Move in random direction                       */
 
-
 #define NUMBER_OF_TERRAIN_TYPES 4
-
 #define TERRAIN_GRASS  0 /* None */
 #define TERRAIN_WATER  1 /* Ice & Lightning synergies */
 #define TERRAIN_ROCK   2 /* Stone & Wind synergies    */
 #define TERRAIN_MAGMA  3 /* Fire & Posion synergies   */
 
-#define TERRAIN_SYNERGY_PERCENT 1.3
-
 #define NUMBER_OF_ENEMY_TYPES 4
-
-#define ENEMY_BASIC   0
+#define ENEMY_BASIC   0 /* Not resistant              */
 #define ENEMY_ENERGY  1 /* Fire & Lightning resistant */
 #define ENEMY_STRONG  2 /* Stone & Wind resistant     */
 #define ENEMY_FLUID   3 /* Ice & Posion resistant     */
 
-#define ENEMY_RESISTANCE_PERCENT 0.7
 
+/* Game Balance */
+#define PLAYER_START_HEALTH               100
 
+#define ENEMY_RESISTANCE_PERCENT          0.7
+#define TERRAIN_SYNERGY_PERCENT           1.3
 
+#define MAX_NUMBER_OF_ENEMIES             50
+#define ENEMY_LEVEL_CAP                   50
+
+#define MAX_NUMBER_OF_COMBOS              10
+
+#define MIN_KATANA_SHARPNESS              25
+#define CHANCE_FOR_SHARPNESS_DECREASE     10
+
+#define MAX_NUMBER_OF_FALLEN_KATANAS      10
+#define CHANCE_FOR_FALLEN_KATANA          100
+
+#define CHANCE_FOR_HEALTH_INCREASE        3
+#define MAX_HEALTH_INCREASE               3
+
+#define TURNS_UNTIL_DIFFICULTY_INCREASE   100
+#define TURNS_UNTIL_KATANA_POWER_INCREAS  120
+
+#define ENEMY_SPAWN_NUMBER_BASE           (myRand(5) + 5)
+
+#define ENEMY_SPEED_GEN                   (abs(dice(3, 4) - 6))
+#define ENEMY_LEVEL_GEN                   (dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 1, 5))
+#define ENEMY_MAX_HEALTH_GEN              ((myRand(currentEnemy->level) + 1) * 5)
+#define ENEMY_DAMAGE_GEN                  (currentEnemy->level / 2)
+           
 #define KATANA_MAX_DAMAGE 12
-
-#define MAX_NUMBER_OF_ENEMIES 50
-
-#define MAX_NUMBER_OF_COMBOS 10
-
-#define MIN_KATANA_SHARPNESS 25
+//#define KATANA_DAMAGE_GEN                 (dice(1 + ((int) (currentGameData.turn/TURNS_UNTIL_KATANA_POWER_INCREAS)), 4) + 1)
+#define KATANA_DAMAGE_MOD_GEN             (fmax(dice(4,3) - 6, 0) + ((int) (currentGameData.turn/TURNS_UNTIL_KATANA_POWER_INCREAS)))
 
 
 
+/* Misc */
+#define HISTORY_LENGTH 50
+#define ERROR(x) printError(#x,__FILE__, __LINE__)
+
+
+
+/* Bit Masks */
 #define CHECK_BIT(var, mask) ((mask & var) == mask)
-
 
 
 #define COMBO_FLAG_DOUBLE_ATTACK    0b0000000000000001
 #define COMBO_FLAG_FORCE_ATTACK     0b0000000000000010
 #define COMBO_FLAG_SCARE_ENEMIES    0b0000000000000100
-
-
 
 
 #define WAVE_FLAG_ALL_AT_ONCE       0b0000000000000001
@@ -154,6 +168,7 @@
 #define WAVE_FLAG_THREE_SIDES_SPAWN 0b0100000000000000
 #define WAVE_FLAG_FOUR_SIDES_SPAWN  0b1000000000000000
 
+/* Structs */
 struct Vec2 {
     int y;
     int x;
@@ -200,7 +215,7 @@ struct Enemy {
     int damage;
     int speed; /* 1:normal - 6:slow */
 
-    int level; /* health * power */
+    int level;
 
 
 
@@ -240,6 +255,8 @@ struct Wave {
     unsigned short flags;
 
     int enemiesToSpawn[4];
+
+    bool activeWave;
 };
 
 struct GameData {
@@ -251,6 +268,8 @@ struct GameData {
 
 
     struct Tile map[MAP_HEIGHT][MAP_WIDTH];
+
+    int currentNumberOfFallenKatanas;
 
     int turn;
 
@@ -270,6 +289,7 @@ struct GameData {
     unsigned short comboFlags;
 
     struct Wave currentWave;
+    int currentNumberOfWaves;
     int turnOfLastEnemySpawn;
 
 
@@ -474,7 +494,7 @@ const char katanaBladeTipTypes[NUMBER_OF_KATANA_BLADE_TIP_TYPES][2] = {
 
 #define NUMBER_OF_PROTO_COMBOS 9
 struct ProtoCombo protoCombos[NUMBER_OF_PROTO_COMBOS] = {
-    {0, 2, "Discover", "Discover a combo"},
+    {0, 5, "Discover", "Discover a combo"},
     {1, 3, "Heal", "Gives a small health boost"},
     {2, 2, "Terriform", "Randomly changes the terrain under your feet"},
     {3, 4, "Freeze", "Freezes all enemies for 2 turns"},
@@ -509,7 +529,7 @@ double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance
 int findClosestEnemy();                                              /* Return index of the closest enemy  */
 double findDistanceToClosestEnemy(struct Vec2 location);             /* Function used in retreat movement  */
 struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse); /* Next step from start to end  */
-bool findNearbyEnemies(int (*enemies)[8], int *number);              /* Find enemies adjacent to player    */
+bool findNearbyEnemies(struct Vec2 loc, int (*enemies)[8], int *number); /* Find enemies adjacent to player*/
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
 void playerMove(struct Katana katana);                               /* Moves the player                   */
 void enemyMovement(int enemyIndex);                                  /* Moves an enemy                     */

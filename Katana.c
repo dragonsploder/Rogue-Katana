@@ -32,6 +32,9 @@ void main(){
     currentGameData.turnsToFreeze = 0;
     currentGameData.numberOfCombos = 0;
     currentGameData.comboFlags = 0;
+    currentGameData.currentNumberOfFallenKatanas = 0;
+    currentGameData.currentNumberOfWaves = 0;
+    currentGameData.currentNumberOfEnemies = 0;
 
     currentGameData.saveCheck = 572;
 
@@ -56,7 +59,7 @@ void main(){
     currentGameData.currentNumberOfDiscoveredCombos = 1;
     currentGameData.discoveredCombos[0] = 0;
 
-    int numberOfCombosInGame = 5 + myRand(2);
+    int numberOfCombosInGame = 2 + myRand(2);
     for (int i = 1; i < numberOfCombosInGame; i++) {
         int newCombo;
         bool alreadyCombo;
@@ -76,10 +79,11 @@ void main(){
 
     genMap();
 
+    /*
     for (int i = 0; i < 10; i++) {
         //genEnemy();
         genFallenKatana();
-    }
+    }*/
 
     mainMenu();
     stopCurses();
@@ -196,8 +200,13 @@ void gameLoop() {
         }
 
         if (validMove && !noActionCommand && !infoKey) {
-            enemyWave();
             pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana, currentGameData.player.katanas[selectedKatana].movementType);
+            
+            if (myRand(CHANCE_FOR_FALLEN_KATANA) == 0) {
+                genFallenKatana();
+            }
+
+            enemyWave();
 
 
             if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_SCARE_ENEMIES)) {
@@ -211,8 +220,8 @@ void gameLoop() {
                 int nearByEnemies[8];
                 int number;
 
-                /* If enemy is nearby and a retreat move has not been used twice in a row */
-                if (findNearbyEnemies(&nearByEnemies, &number) && !(currentGameData.previousMoves[2][0] == MOVEMENT_RETREAT && currentGameData.player.katanas[selectedKatana].movementType == MOVEMENT_RETREAT)) {
+                /* If enemy is nearby and a retreat katana has not been used twice in a row */
+                if (findNearbyEnemies(currentGameData.player.location, &nearByEnemies, &number) && !(currentGameData.previousMoves[1][2] == MOVEMENT_RETREAT && currentGameData.previousMoves[0][2] == MOVEMENT_RETREAT)) {
                 
                     /* Right now attack lowest level enemy */
                     int lowestLevelIndex = 0;
@@ -232,6 +241,16 @@ void gameLoop() {
                         pickUpFallenKatana();
                     }
                     currentGameData.player.katanas[selectedKatana].numberOfMoves++;
+
+                    /* Increase health when not attacking */
+                    // currentGameData.player.health = max(currentGameData.player.health += 5, PLAYER_START_HEALTH);
+                    if (myRand(CHANCE_FOR_HEALTH_INCREASE) == 0) {
+                        currentGameData.player.health += myRand(MAX_HEALTH_INCREASE - 1) + 1;
+                    }
+                    if (currentGameData.player.health > PLAYER_START_HEALTH) {
+                        currentGameData.player.health = PLAYER_START_HEALTH;
+                    }
+
                 }
             }
 
@@ -364,10 +383,10 @@ struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse) {
     return step;
 }  
 
-bool findNearbyEnemies(int (*enemies)[8], int *number) {
+bool findNearbyEnemies(struct Vec2 loc, int (*enemies)[8], int *number) {
     *number = 0;
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
-        if (findDistance(currentGameData.player.location, currentGameData.enemies[i].location) == 1) {
+        if (findDistance(loc, currentGameData.enemies[i].location) == 1) {
             (*enemies)[(*number)++] = i;
         }
     }
@@ -378,7 +397,7 @@ bool findNearbyEnemies(int (*enemies)[8], int *number) {
 /* Movement */
 
 void playerMove(struct Katana katana) {
-    struct Vec2 newLocation;
+    struct Vec2 newLocation = currentGameData.player.location;
 
     switch (katana.movementType) {
         case MOVEMENT_STRIKE: {
@@ -407,6 +426,10 @@ void playerMove(struct Katana katana) {
         }
         
         case MOVEMENT_RETREAT: { /* I can't think of a better way to do this */
+            if (currentGameData.currentNumberOfEnemies == 0) {
+                break;
+            }
+
             double distances[9];
             distances[0] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 1});
             distances[1] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 0});
@@ -445,6 +468,49 @@ void playerMove(struct Katana katana) {
                 distances[farthestDistanceIndex] = 0; /* If this option is out of bounds, make sure we don't pick it again */
             } while ((newLocation.y < 0 || newLocation.y >= MAP_HEIGHT) || (newLocation.x < 0 || newLocation.x >= MAP_WIDTH));
             
+            /* If moving would not lead to farther distances, move to tile touching least enemies */
+            /* It's just the same algorithem again, sorry */
+            if (distances[farthestDistanceIndex] == 0) {
+                int numberOfEnemies[9];
+                int nearByEnemies[8];
+                
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 1}, &nearByEnemies, &numberOfEnemies[0]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 0}, &nearByEnemies, &numberOfEnemies[1]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x - 1}, &nearByEnemies, &numberOfEnemies[2]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 1}, &nearByEnemies, &numberOfEnemies[3]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 0}, &nearByEnemies, &numberOfEnemies[4]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x - 1}, &nearByEnemies, &numberOfEnemies[5]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 1}, &nearByEnemies, &numberOfEnemies[6]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 0}, &nearByEnemies, &numberOfEnemies[7]);
+                findNearbyEnemies((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x - 1}, &nearByEnemies, &numberOfEnemies[8]);
+
+                int leastNumberIndex = 0;
+                do {
+                    newLocation = currentGameData.player.location;
+                    
+                    for (int i = 0; i < 9; i++) {
+                        if (numberOfEnemies[i] < numberOfEnemies[leastNumberIndex]) {
+                            leastNumberIndex = i;
+                        }
+                    }
+
+                    switch (leastNumberIndex) {
+                        case 0: { newLocation.y += 1; newLocation.x += 1; break; }
+                        case 1: { newLocation.y += 1; newLocation.x += 0; break; }
+                        case 2: { newLocation.y += 1; newLocation.x -= 1; break; }
+                        case 3: { newLocation.y += 0; newLocation.x += 1; break; }
+                        case 4: { newLocation.y += 0; newLocation.x += 0; break; }
+                        case 5: { newLocation.y += 0; newLocation.x -= 1; break; }
+                        case 6: { newLocation.y -= 1; newLocation.x += 1; break; }
+                        case 7: { newLocation.y -= 1; newLocation.x += 0; break; }
+                        case 8: { newLocation.y -= 1; newLocation.x -= 1; break; }
+
+                        default:{ ERROR("This shouldn't be possible");           }
+                    }
+
+                    numberOfEnemies[leastNumberIndex] = 8; /* If this option is out of bounds or an enemy, make sure we don't pick it again */
+                } while ((newLocation.y < 0 || newLocation.y >= MAP_HEIGHT) || (newLocation.x < 0 || newLocation.x >= MAP_WIDTH) || findDistanceToClosestEnemy(newLocation) == 0);
+            }
             
             break;
         }
@@ -468,11 +534,14 @@ void playerMove(struct Katana katana) {
         }
         
         case MOVEMENT_DEFEND: {
-            newLocation = currentGameData.player.location;
             break;
         }
 
         case MOVEMENT_FALLEN: { /* This too could be more efficient */
+            if (currentGameData.currentNumberOfFallenKatanas == 0) {
+                break;
+            }
+
             struct Vec2 closestFallenKatana = (struct Vec2) {0, 0};
             int closestFallenKatanaDistance = MAP_HEIGHT + MAP_WIDTH;
             for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -565,10 +634,10 @@ void attackEnemy(int enemyIndex, struct Katana* katana) {
         katana->numberOfKills++;
     }
 
-    int temp = myRand(10);
+    int chanceForSharpnessDecrease = myRand(CHANCE_FOR_SHARPNESS_DECREASE);
 
-    if (temp > 5) {
-        katana->sharpness -= (temp - 5);
+    if (chanceForSharpnessDecrease > CHANCE_FOR_SHARPNESS_DECREASE/2) {
+        katana->sharpness -= (chanceForSharpnessDecrease - (CHANCE_FOR_SHARPNESS_DECREASE/2));
     }
     if (katana->sharpness < MIN_KATANA_SHARPNESS) {
         katana->sharpness = MIN_KATANA_SHARPNESS;
@@ -586,9 +655,24 @@ void genEnemy(int type, int sideLocation) {
     if (currentGameData.currentNumberOfEnemies < MAX_NUMBER_OF_ENEMIES) {
         struct Enemy *currentEnemy = &currentGameData.enemies[currentGameData.currentNumberOfEnemies];
 
-        //currentEnemy->type = myRand(NUMBER_OF_ENEMY_TYPES);
+
         currentEnemy->type = type;
 
+        // Speed not effected by level
+        currentEnemy->speed = ENEMY_SPEED_GEN;
+
+        currentEnemy->level = ENEMY_LEVEL_GEN;
+
+        if (currentEnemy->level > ENEMY_LEVEL_CAP) {
+            currentEnemy->level = (ENEMY_LEVEL_CAP + 5) - myRand(10);
+        }
+
+        currentEnemy->maxHeath = ENEMY_MAX_HEALTH_GEN;
+        currentEnemy->health = currentEnemy->maxHeath;
+
+        currentEnemy->damage = ENEMY_DAMAGE_GEN;
+
+        /*
         //currentEnemy->speed = abs(dice(3, 4) - 6);
         currentEnemy->speed = dice(2, 2);
         //currentEnemy->speed = 4;
@@ -597,7 +681,7 @@ void genEnemy(int type, int sideLocation) {
         currentEnemy->health = currentEnemy->maxHeath;
         currentEnemy->damage = dice(2, 5);
         currentEnemy->level = currentGameData.enemies[currentGameData.currentNumberOfEnemies].health * currentGameData.enemies[currentGameData.currentNumberOfEnemies].damage;
-
+        */
 
         struct Vec2 location = (struct Vec2) {0, 0};
 
@@ -651,10 +735,12 @@ void genKatana(struct Katana* katana) {
     katana->type = myRand(NUMBER_OF_KATANA_TYPES);
 
     /* 1 - 12 */
-    katana->damage = dice(3, 4) + 1;
+    katana->damage = dice(3, 4);
+
+    //katana->damage = KATANA_DAMAGE_GEN;
 
     /* 0 - 6 */
-    katana->damageMod = fmax(dice(4,3) - 6, 0);
+    katana->damageMod = KATANA_DAMAGE_MOD_GEN;
 
     katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
 
@@ -681,6 +767,10 @@ void genKatana(struct Katana* katana) {
 }
 
 void genFallenKatana() {
+    if (currentGameData.currentNumberOfFallenKatanas > MAX_NUMBER_OF_FALLEN_KATANAS) {
+        return;
+    }
+
     struct Katana fallenKatana;
     genKatana(&fallenKatana);
 
@@ -698,6 +788,8 @@ void genFallenKatana() {
 
     currentGameData.map[location.y][location.x].fallenKatana = fallenKatana;
     currentGameData.map[location.y][location.x].hasFallenKatana = true;
+    currentGameData.currentNumberOfFallenKatanas++;
+    update("A katana strikes the earth.", true);
 }
 
 void genMap() {
@@ -741,7 +833,7 @@ void genCombo(int protoCombo) {
 void genWave(struct Wave* wave) {
     int baseEnemise = 5;
     int additionEnemise = 5;
-    wave->difficulty = (int) (currentGameData.turn / 100) + 1;
+    wave->difficulty = ((int) (currentGameData.turn / TURNS_UNTIL_DIFFICULTY_INCREASE)) + 1;
 
     int flag1 = pow(2, myRand(4));
     int flag2 = pow(2, myRand(4));
@@ -751,7 +843,7 @@ void genWave(struct Wave* wave) {
     wave->flags = flag1 + (flag2 << 4) + (flag3 << 8) + (flag4 << 12);
 
     if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_ONE_TYPE)) {
-        wave->enemiesToSpawn[myRand(4)] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[myRand(4)] = wave->difficulty * ENEMY_SPAWN_NUMBER_BASE;
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_TWO_TYPES)) {
         int typeOne = myRand(4);
         int typeTwo;
@@ -759,8 +851,8 @@ void genWave(struct Wave* wave) {
             typeTwo = myRand(4);
         } while (typeOne == typeTwo);
 
-        wave->enemiesToSpawn[typeOne] = wave->difficulty * (myRand(5) + 5);
-        wave->enemiesToSpawn[typeTwo] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[typeOne] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 2;
+        wave->enemiesToSpawn[typeTwo] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 2;
 
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_THREE_TYPES)) {
         int typeOne = myRand(4);
@@ -774,19 +866,22 @@ void genWave(struct Wave* wave) {
             typeThree = myRand(4);
         } while (typeThree == typeOne || typeThree == typeTwo);
 
-        wave->enemiesToSpawn[typeOne] = wave->difficulty * (myRand(5) + 5);
-        wave->enemiesToSpawn[typeTwo] = wave->difficulty * (myRand(5) + 5);
-        wave->enemiesToSpawn[typeThree] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[typeOne] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeTwo] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeThree] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ALL_TYPES)) {
-        wave->enemiesToSpawn[0] = wave->difficulty * (myRand(5) + 5);
-        wave->enemiesToSpawn[1] = wave->difficulty * (myRand(5) + 5);
-        wave->enemiesToSpawn[2] = wave->difficulty * (myRand(5) + 5);
-        wave->enemiesToSpawn[3] = wave->difficulty * (myRand(5) + 5);
+        wave->enemiesToSpawn[0] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[1] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[2] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[3] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
     } else {
         ERROR("Wave flag bit error");
     }
 
+    wave->activeWave = true;
+
     //wave->enemiesToSpawn = (difficulty) * 2 + myRand(difficulty * 3);
+    currentGameData.currentNumberOfWaves++;
 }
 
 /* Combo Functions */
@@ -881,7 +976,7 @@ void activateCombo(int comboIndex) {
         }
 
         case 1: { /* Heal */
-            currentGameData.player.health += myRand(PLAYER_START_HEALTH / 20);
+            currentGameData.player.health += myRand(PLAYER_START_HEALTH / 5);
             if (currentGameData.player.health > PLAYER_START_HEALTH) {
                 currentGameData.player.health = PLAYER_START_HEALTH;
             }
@@ -1109,8 +1204,8 @@ void pickUpFallenKatana() {
         case BOTTOM_RIGHT_KATANA:
             replaceKatana(3, fallenKatana);
             break;
-        case BREAK_KATANA_KEY: /* Small health boost */
-            currentGameData.player.health += myRand(fallenKatana.damage);
+        case BREAK_KATANA_KEY: /* Health boost */
+            currentGameData.player.health += myRand(fallenKatana.damage * 4);
             if (currentGameData.player.health > PLAYER_START_HEALTH) {
                 currentGameData.player.health = PLAYER_START_HEALTH;
             }
@@ -1122,12 +1217,16 @@ void pickUpFallenKatana() {
     } while(!validAction);
 
     currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].hasFallenKatana = false;
+    currentGameData.currentNumberOfFallenKatanas--;
 }
 
 
 void enemyWave() {
-    if (currentGameData.currentNumberOfEnemies == 0) {
+    if (currentGameData.turn == 0 || !currentGameData.currentWave.activeWave) {
         genWave(&currentGameData.currentWave);
+        char buffer[20];
+        sprintf(buffer, "Wave %i approaches.", currentGameData.currentNumberOfWaves);
+        update(&buffer[0], true);
     }
 
 
@@ -1194,6 +1293,10 @@ void enemyWave() {
 
         if (locations[0] + locations[1] + locations[2] + locations[3] == -4) {
             ERROR("Wave flag bit error");
+        }
+
+        if (numberOfEnemiesToSpawn == 0) {
+            currentGameData.currentWave.activeWave = false;
         }
 
         for (int i = 0; i < numberOfEnemiesToSpawn; i++) {
@@ -1840,10 +1943,6 @@ void printScoresFromScoresFile() {
     int highestScore = 0;
     int highestScoreIndex = 0;
     char buffer[50];
-
-    for (int i = 0; i < lineNumber; i++) {
-        printf("%i\n", scoresValue[i]);
-    }
 
 
     for (int i = 0; i < lineNumber; i++) {
