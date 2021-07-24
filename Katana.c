@@ -15,6 +15,7 @@
 #include <time.h>            /* Functions for date and time                                                */
 #include <string.h>          /* Functions for string manipulation                                          */
 #include <math.h>            /* General math functions                                                     */
+#include <ctype.h>          /* Char manipulation                                                          */
 #include <unistd.h>          /* Misc                                                                       */
 #include <pdcurses/curses.h> /* Libraray for terminal manipulation                                         */
 #include "Katana.h"          /* Katana variables, arrays and structures                                    */
@@ -23,6 +24,7 @@
 
 void main(){
     long seed = time(NULL);
+    printf("Seed:%i\n", seed);
     srand(seed);
 
     initCurses();
@@ -38,6 +40,8 @@ void main(){
 
     currentGameData.saveCheck = 572;
 
+    currentGameData.currentWave = (struct Wave) {0, 0, {0, 0, 0, 0}};
+
     for (int i = 0; i < HISTORY_LENGTH; i++) {
         currentGameData.previousMoves[i][0] = -1;
         currentGameData.previousMoves[i][1] = -1;
@@ -48,11 +52,12 @@ void main(){
     currentGameData.player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
     currentGameData.player.health = PLAYER_START_HEALTH;
     currentGameData.player.turnOfLastCombo = 0;
-    genKatana(&currentGameData.player.katanas[0]);
-    genKatana(&currentGameData.player.katanas[1]);
-    genKatana(&currentGameData.player.katanas[2]);
-    genKatana(&currentGameData.player.katanas[3]);
+    genKatana(&currentGameData.player.katanas[0], MOVEMENT_FALLEN);
+    genKatana(&currentGameData.player.katanas[1], -1);
+    genKatana(&currentGameData.player.katanas[2], -1);
+    genKatana(&currentGameData.player.katanas[3], -1);
 
+    genPlayerDNA();
 
 
     genCombo(0);
@@ -97,6 +102,20 @@ void mainMenu(){
 
     switch (choice) {
         case 0: {
+            char buffer[20];
+            clearScreen();
+            mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 27, "Please enter your name. Leave blank for a random name");
+            if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+                mainMenu();
+                return;
+            }
+
+            strncpy(currentGameData.player.name, &buffer[0], 20);
+
+            if (currentGameData.player.name[0] == '\0') {
+                genRandomName(currentGameData.player.name, false, myRand(1));
+            }
+
             gameLoop();
             break;
         }
@@ -257,7 +276,7 @@ void gameLoop() {
             if (currentGameData.turnsToFreeze == 0) {
                 for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
                     if (doesEnemyMoveThisTurn(i)) {
-                        if (findDistance(currentGameData.enemies[i].location, currentGameData.player.location) == 1) {
+                        if (findDistance(currentGameData.enemies[i].location, currentGameData.player.location, false) == 1) {
                             attackPlayer(i);
                         } else {
                             enemyMovement(i);
@@ -327,15 +346,19 @@ void gameLoop() {
 /* Find functions */
 
 
-double findDistance(struct Vec2 start, struct Vec2 end) {
-    return fmax(abs(end.y - start.y), abs(end.x - start.x));
+double findDistance(struct Vec2 start, struct Vec2 end, bool pythagoras) {
+    if (pythagoras) {
+        return sqrt(pow(end.y - start.y, 2) + pow(end.x - start.x, 2));
+    } else {
+        return fmax(abs(end.y - start.y), abs(end.x - start.x));
+    }
 }
 
 int findClosestEnemy(){
     int closestEnemy = 0;
     int closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
-        int currentEnemyDistance = findDistance(currentGameData.player.location, currentGameData.enemies[i].location);
+        int currentEnemyDistance = findDistance(currentGameData.player.location, currentGameData.enemies[i].location, false);
         if (currentEnemyDistance < closestEnemyDistance) {
             closestEnemy = i;
             closestEnemyDistance = currentEnemyDistance;
@@ -344,11 +367,11 @@ int findClosestEnemy(){
     return closestEnemy;
 }
 
-double findDistanceToClosestEnemy(struct Vec2 location) {
+double findDistanceToClosestEnemy(struct Vec2 location, bool pythagoras) {
     int closestEnemy = 0;
-    int closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
+    double closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
-        int currentEnemyDistance = findDistance(location, currentGameData.enemies[i].location);
+        double currentEnemyDistance = findDistance(location, currentGameData.enemies[i].location, pythagoras);
         if (currentEnemyDistance < closestEnemyDistance) {
             closestEnemy = i;
             closestEnemyDistance = currentEnemyDistance;
@@ -386,7 +409,7 @@ struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse) {
 bool findNearbyEnemies(struct Vec2 loc, int (*enemies)[8], int *number) {
     *number = 0;
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
-        if (findDistance(loc, currentGameData.enemies[i].location) == 1) {
+        if (findDistance(loc, currentGameData.enemies[i].location, false) == 1) {
             (*enemies)[(*number)++] = i;
         }
     }
@@ -401,6 +424,10 @@ void playerMove(struct Katana katana) {
 
     switch (katana.movementType) {
         case MOVEMENT_STRIKE: {
+            if (currentGameData.currentNumberOfEnemies == 0) {
+                break;
+            }
+
             int strongestEnemy = 0;
             for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
                 if (currentGameData.enemies[i].level > currentGameData.enemies[strongestEnemy].level) {
@@ -412,10 +439,14 @@ void playerMove(struct Katana katana) {
         }
 
         case MOVEMENT_BERSERK: {
+            if (currentGameData.currentNumberOfEnemies == 0) {
+                break;
+            }
+
             int closestEnemy = 0;
             int closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
             for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
-                int currentEnemyDistance = findDistance(currentGameData.player.location, currentGameData.enemies[i].location);
+                int currentEnemyDistance = findDistance(currentGameData.player.location, currentGameData.enemies[i].location, false);
                 if (currentEnemyDistance < closestEnemyDistance) {
                     closestEnemy = i;
                     closestEnemyDistance = currentEnemyDistance;
@@ -431,15 +462,15 @@ void playerMove(struct Katana katana) {
             }
 
             double distances[9];
-            distances[0] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 1});
-            distances[1] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 0});
-            distances[2] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x - 1});
-            distances[3] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 1});
-            distances[4] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 0});
-            distances[5] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x - 1});
-            distances[6] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 1});
-            distances[7] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 0});
-            distances[8] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x - 1});
+            distances[0] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 1}, true);
+            distances[1] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x + 0}, true);
+            distances[2] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 1, currentGameData.player.location.x - 1}, true);
+            distances[3] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 1}, true);
+            distances[4] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x + 0}, true);
+            distances[5] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y + 0, currentGameData.player.location.x - 1}, true);
+            distances[6] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 1}, true);
+            distances[7] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x + 0}, true);
+            distances[8] = findDistanceToClosestEnemy((struct Vec2) {currentGameData.player.location.y - 1, currentGameData.player.location.x - 1}, true);
 
             int farthestDistanceIndex = 0;
             do {
@@ -470,7 +501,7 @@ void playerMove(struct Katana katana) {
             
             /* If moving would not lead to farther distances, move to tile touching least enemies */
             /* It's just the same algorithem again, sorry */
-            if (distances[farthestDistanceIndex] == 0) {
+            if (farthestDistanceIndex == 4) {
                 int numberOfEnemies[9];
                 int nearByEnemies[8];
                 
@@ -509,7 +540,7 @@ void playerMove(struct Katana katana) {
                     }
 
                     numberOfEnemies[leastNumberIndex] = 8; /* If this option is out of bounds or an enemy, make sure we don't pick it again */
-                } while ((newLocation.y < 0 || newLocation.y >= MAP_HEIGHT) || (newLocation.x < 0 || newLocation.x >= MAP_WIDTH) || findDistanceToClosestEnemy(newLocation) == 0);
+                } while ((newLocation.y < 0 || newLocation.y >= MAP_HEIGHT) || (newLocation.x < 0 || newLocation.x >= MAP_WIDTH) || findDistanceToClosestEnemy(newLocation, false) == 0);
             }
             
             break;
@@ -521,7 +552,7 @@ void playerMove(struct Katana katana) {
             for (int y = 0; y < MAP_HEIGHT; y++) {
                 for (int x = 0; x < MAP_WIDTH; x++) {
                     if (currentGameData.map[y][x].type == katanaToTerrain[katana.type]) {
-                        int currentTerrainDistance = findDistance(currentGameData.player.location, (struct Vec2) {y, x});
+                        int currentTerrainDistance = findDistance(currentGameData.player.location, (struct Vec2) {y, x}, false);
                         if (currentTerrainDistance < closestTerrainDistance) {
                             closestTerrain = (struct Vec2) {y, x};
                             closestTerrainDistance = currentTerrainDistance;
@@ -547,7 +578,7 @@ void playerMove(struct Katana katana) {
             for (int y = 0; y < MAP_HEIGHT; y++) {
                 for (int x = 0; x < MAP_WIDTH; x++) {
                     if (currentGameData.map[y][x].hasFallenKatana) {
-                        int currentFallenKatanaDistance = findDistance(currentGameData.player.location, (struct Vec2) {y, x});
+                        int currentFallenKatanaDistance = findDistance(currentGameData.player.location, (struct Vec2) {y, x}, false);
                         if (currentFallenKatanaDistance < closestFallenKatanaDistance) {
                             closestFallenKatana = (struct Vec2) {y, x};
                             closestFallenKatanaDistance = currentFallenKatanaDistance;
@@ -715,7 +746,7 @@ void genEnemy(int type, int sideLocation) {
                     ERROR("Invalid location input");
                 }
             }
-        } while ((checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location) < 8) && tests > 0);
+        } while ((checkForEnemy(location) != 0 || findDistance(location, currentGameData.player.location, false) < 8) && tests > 0);
 
         currentEnemy->location = location;
         currentGameData.currentNumberOfEnemies++;
@@ -723,7 +754,7 @@ void genEnemy(int type, int sideLocation) {
 }
 
 void removeEnemy(int enemyIndex) {
-    currentGameData.score += (int) ((float) currentGameData.enemies[enemyIndex].level * ( (float) currentGameData.turn / 100.0)); 
+    currentGameData.score += (int) ((float) currentGameData.enemies[enemyIndex].level * ( (float) currentGameData.turn / (float) TURNS_UNTIL_DIFFICULTY_INCREASE)); 
 
     for (int i = enemyIndex; i < currentGameData.currentNumberOfEnemies - 1; i++) {
         currentGameData.enemies[i] = currentGameData.enemies[i + 1];
@@ -731,7 +762,7 @@ void removeEnemy(int enemyIndex) {
     currentGameData.currentNumberOfEnemies--;
 }
 
-void genKatana(struct Katana* katana) {
+void genKatana(struct Katana* katana, int setMovementType) {
     katana->type = myRand(NUMBER_OF_KATANA_TYPES);
 
     /* 1 - 12 */
@@ -742,7 +773,11 @@ void genKatana(struct Katana* katana) {
     /* 0 - 6 */
     katana->damageMod = KATANA_DAMAGE_MOD_GEN;
 
-    katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
+    if (setMovementType == -1) {
+        katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
+    } else {
+        katana->movementType = setMovementType;
+    }
 
     katana->sharpness = 100;
 
@@ -772,13 +807,13 @@ void genFallenKatana() {
     }
 
     struct Katana fallenKatana;
-    genKatana(&fallenKatana);
+    genKatana(&fallenKatana, -1);
 
     struct Vec2 location;
     do {
         location.x = myRand(MAP_WIDTH);
         location.y = myRand(MAP_HEIGHT);
-    } while(findDistance(location, currentGameData.player.location) < 5 || checkForEnemy(location) || currentGameData.map[location.y][location.x].hasFallenKatana);
+    } while(findDistance(location, currentGameData.player.location, false) < 5 || checkForEnemy(location) || currentGameData.map[location.y][location.x].hasFallenKatana);
 
     if (myRand(3) == 0) {
         terrainAreaMap(katanaToTerrain[fallenKatana.type], location, myRand(3) + 1);
@@ -843,7 +878,7 @@ void genWave(struct Wave* wave) {
     wave->flags = flag1 + (flag2 << 4) + (flag3 << 8) + (flag4 << 12);
 
     if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_ONE_TYPE)) {
-        wave->enemiesToSpawn[myRand(4)] = wave->difficulty * ENEMY_SPAWN_NUMBER_BASE;
+        wave->enemiesToSpawn[myRand(4)] = (wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE;
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_TWO_TYPES)) {
         int typeOne = myRand(4);
         int typeTwo;
@@ -851,8 +886,8 @@ void genWave(struct Wave* wave) {
             typeTwo = myRand(4);
         } while (typeOne == typeTwo);
 
-        wave->enemiesToSpawn[typeOne] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 2;
-        wave->enemiesToSpawn[typeTwo] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 2;
+        wave->enemiesToSpawn[typeOne] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 2;
+        wave->enemiesToSpawn[typeTwo] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 2;
 
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_THREE_TYPES)) {
         int typeOne = myRand(4);
@@ -866,23 +901,32 @@ void genWave(struct Wave* wave) {
             typeThree = myRand(4);
         } while (typeThree == typeOne || typeThree == typeTwo);
 
-        wave->enemiesToSpawn[typeOne] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[typeTwo] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[typeThree] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeOne] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeTwo] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeThree] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ALL_TYPES)) {
-        wave->enemiesToSpawn[0] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[1] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[2] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[3] = (wave->difficulty * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[0] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[1] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[2] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[3] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
     } else {
         ERROR("Wave flag bit error");
     }
-
-    wave->activeWave = true;
-
     //wave->enemiesToSpawn = (difficulty) * 2 + myRand(difficulty * 3);
     currentGameData.currentNumberOfWaves++;
 }
+
+void genPlayerDNA() {
+    char nucleotides[63] = "!#$^*()+=-[]{}|\\/:<>XO'~.ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+
+    for (int i = 0; i < MAP_HEIGHT; i++) {
+        for (int j = 0; j < MAP_WIDTH; j++) {
+            currentGameData.player.DNA[i][j] = nucleotides[myRand(61)];
+        }
+        currentGameData.player.DNA[i][MAP_WIDTH] = '\0';
+    }
+}
+
 
 /* Combo Functions */
 int checkForCombo(){
@@ -993,7 +1037,7 @@ void activateCombo(int comboIndex) {
         }
         
         case 3: { /* Freeze */
-            currentGameData.turnsToFreeze = 2;
+            currentGameData.turnsToFreeze = 6;
             break;
         }
 
@@ -1020,7 +1064,7 @@ void activateCombo(int comboIndex) {
             do {
                 newLocation.y = myRand(MAP_HEIGHT);
                 newLocation.x = myRand(MAP_WIDTH);
-            } while(findDistance(currentGameData.player.location, newLocation) < 5 || findDistanceToClosestEnemy(newLocation) == 0 || currentGameData.map[newLocation.y][newLocation.x].hasFallenKatana);
+            } while(findDistance(currentGameData.player.location, newLocation, false) < 5 || findDistanceToClosestEnemy(newLocation, false) == 0 || currentGameData.map[newLocation.y][newLocation.x].hasFallenKatana);
 
             currentGameData.player.location = newLocation;
             break;
@@ -1222,21 +1266,16 @@ void pickUpFallenKatana() {
 
 
 void enemyWave() {
-    if (currentGameData.turn == 0 || !currentGameData.currentWave.activeWave) {
-        genWave(&currentGameData.currentWave);
-        char buffer[20];
-        sprintf(buffer, "Wave %i approaches.", currentGameData.currentNumberOfWaves);
-        update(&buffer[0], true);
-    }
-
-
     int totalEnemies = 0 ;
     for (int i = 0; i < NUMBER_OF_ENEMY_TYPES; i++) {
         totalEnemies += currentGameData.currentWave.enemiesToSpawn[i];
     }
     
-    if (totalEnemies == 0) {
-        return;
+    if (totalEnemies == 0 && currentGameData.currentNumberOfEnemies == 0) {
+        genWave(&currentGameData.currentWave);
+        char buffer[20];
+        sprintf(buffer, "Wave %i approaches.", currentGameData.currentNumberOfWaves);
+        update(&buffer[0], true);
     }
 
 
@@ -1293,10 +1332,6 @@ void enemyWave() {
 
         if (locations[0] + locations[1] + locations[2] + locations[3] == -4) {
             ERROR("Wave flag bit error");
-        }
-
-        if (numberOfEnemiesToSpawn == 0) {
-            currentGameData.currentWave.activeWave = false;
         }
 
         for (int i = 0; i < numberOfEnemiesToSpawn; i++) {
@@ -1417,6 +1452,37 @@ void saveScore() {
     scoresFile = fopen("Scores","a");
     fprintf(scoresFile,"%s - %i\n", currentGameData.player.name, currentGameData.score);
     fclose(scoresFile);
+}
+
+/* Simple name generator, used for first, last, and city names. */
+/* Based off of: http://arns.freeservers.com/workshop38.html    */
+void genRandomName(char name[20], bool isSurname, bool gender){
+    char vowels[] = "aaaeeeiiou";
+    int vowelsLen = 10;
+    char consonants[] = "bbbcdddffgghjkllmmmnnnppqrrssstttvwxyz";
+    int consonantsLen = 38;
+
+    name[0] = '\0';
+
+    if (myRand(2) == 0){
+        strncat(name, &consonants[myRand(consonantsLen)], 1);
+    }
+
+    int nameLen = myRand(3) + 1;
+
+    for (int i = 0; i < nameLen; i++){
+        strncat(name, &vowels[myRand(vowelsLen)], 1);
+        strncat(name, &consonants[myRand(consonantsLen)], 1);
+    }
+
+    char maleGenderEnding[] = "us";
+    char femaleGenderEnding[] = "a";
+
+    if (!isSurname){
+        strcat(name, gender ? femaleGenderEnding : maleGenderEnding);
+    }
+
+    name[0] = toupper(name[0]);
 }
 
 /* Utility Functions */
@@ -1819,14 +1885,24 @@ void printMap() {
 void printPlayerData() {
     char buffer[MAP_WIDTH];
     printBox(1, 1, MAP_HEIGHT, MAP_WIDTH, " ");
-
+    for (int i = 0; i < MAP_HEIGHT; i++) {
+        mvprintw(1 + i, 1, "%s", currentGameData.player.DNA[i]);
+    }
+    
+    attron(COLOR_PAIR(COLOR_CYAN));
     mvprintw(2, (MAP_WIDTH/2) - (strlen(currentGameData.player.name)/2), "%s", currentGameData.player.name);
 
+    attron(COLOR_PAIR(COLOR_MAGENTA));
     sprintf(buffer, "%i", currentGameData.score);
+
     mvprintw(3, (int) ((MAP_WIDTH * 0.5) - (strlen(buffer)/2)), "%s", buffer);
 
-    mvprintw(5, (int) (MAP_WIDTH * 0.25), "Hp:%i", currentGameData.player.health);
-    mvprintw(5, (int) (MAP_WIDTH * 0.75), "Turn:%i", currentGameData.turn);
+    attron(COLOR_PAIR(COLOR_RED));
+    mvprintw(4, (int) (MAP_WIDTH * 0.25), "Hp:%i", currentGameData.player.health);
+    mvprintw(4, (int) (MAP_WIDTH * 0.75), "Turn:%i", currentGameData.turn);
+    
+    attrset(A_NORMAL);
+    
 }
 
 void printHelp() {
@@ -1944,6 +2020,7 @@ void printScoresFromScoresFile() {
     int highestScoreIndex = 0;
     char buffer[50];
 
+    clear();
 
     for (int i = 0; i < lineNumber; i++) {
         for (int j = 0; j < lineNumber; j++) {
@@ -1955,7 +2032,12 @@ void printScoresFromScoresFile() {
         mvprintw(i + 1, (MAP_WIDTH/2 - strlen(scores[highestScoreIndex])/2), "%s", scores[highestScoreIndex]);
         scoresValue[highestScoreIndex] = 0;
         highestScore = 0;
-    }
-    getch();
 
+        if (i > (SCREEN_HEIGHT - 4)) {
+            break;
+        }
+    }
+
+    printBoarder(false);
+    getch();
 }

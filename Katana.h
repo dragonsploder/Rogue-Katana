@@ -112,15 +112,16 @@
 #define CHANCE_FOR_SHARPNESS_DECREASE     10
 
 #define MAX_NUMBER_OF_FALLEN_KATANAS      10
-#define CHANCE_FOR_FALLEN_KATANA          100
+#define CHANCE_FOR_FALLEN_KATANA          50
 
 #define CHANCE_FOR_HEALTH_INCREASE        3
-#define MAX_HEALTH_INCREASE               3
+#define MAX_HEALTH_INCREASE               5
 
-#define TURNS_UNTIL_DIFFICULTY_INCREASE   100
+#define TURNS_UNTIL_DIFFICULTY_INCREASE   200
 #define TURNS_UNTIL_KATANA_POWER_INCREAS  120
 
 #define ENEMY_SPAWN_NUMBER_BASE           (myRand(5) + 5)
+#define ENEMY_GEN_PER_DIFFICULTY_INCREASE 3
 
 #define ENEMY_SPEED_GEN                   (abs(dice(3, 4) - 6))
 #define ENEMY_LEVEL_GEN                   (dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 1, 5))
@@ -206,6 +207,8 @@ struct Player {
     struct Vec2 location;
 
     struct Katana katanas[4];
+
+    char DNA[MAP_HEIGHT][MAP_WIDTH + 1];
 };
 
 struct Enemy {
@@ -255,8 +258,6 @@ struct Wave {
     unsigned short flags;
 
     int enemiesToSpawn[4];
-
-    bool activeWave;
 };
 
 struct GameData {
@@ -497,7 +498,7 @@ struct ProtoCombo protoCombos[NUMBER_OF_PROTO_COMBOS] = {
     {0, 5, "Discover", "Discover a combo"},
     {1, 3, "Heal", "Gives a small health boost"},
     {2, 2, "Terriform", "Randomly changes the terrain under your feet"},
-    {3, 4, "Freeze", "Freezes all enemies for 2 turns"},
+    {3, 4, "Freeze", "Freezes all enemies for 6 turns"},
     {4, 3, "Swap", "Randomly swaps the location of 2 katanas"},
     {5, 3, "Boost", "Double the damage of your next attack"},
     {6, 4, "Teleport", "Teleport to a random location"},
@@ -525,9 +526,9 @@ void main();                                                         /* Main fun
 void mainMenu();                                                     /* Handels main menu screen           */
 void gameLoop();                                                     /* Game loop which runs every turn    */
 /*---- Find Functions -------------------------------------------------------------------------------------*/
-double findDistance(struct Vec2 start, struct Vec2 end);             /* Distance between two points        */
+double findDistance(struct Vec2 start, struct Vec2 end, bool pythagoras); /* Distance between two points   */
 int findClosestEnemy();                                              /* Return index of the closest enemy  */
-double findDistanceToClosestEnemy(struct Vec2 location);             /* Function used in retreat movement  */
+double findDistanceToClosestEnemy(struct Vec2 location, bool pythagoras); /* Distance to closest enemy     */
 struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse); /* Next step from start to end  */
 bool findNearbyEnemies(struct Vec2 loc, int (*enemies)[8], int *number); /* Find enemies adjacent to player*/
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
@@ -539,12 +540,13 @@ void attackPlayer(int enemyIndex);                                   /* Attack t
 /*---- Generator & Destructor Functions -------------------------------------------------------------------*/
 void genEnemy(int type, int sideLocation);                           /* Generate a random enemy            */
 void removeEnemy(int enemyIndex);                                    /* Removes an enemy                   */
-void genKatana(struct Katana *katana);                               /* Generate a random Katana           */
+void genKatana(struct Katana *katana, int setMovementType);          /* Generate a random Katana           */
 void genFallenKatana();                                              /* Generate a random fallen Katana    */
 void genMap();                                                       /* Generate random terrain for map    */
 void terrainAreaMap(int terrain, struct Vec2 location, int radius);  /* Place circle of terrain on map     */
 void genCombo(int protoCombo);                                       /* Generate a combo from a protoCombo */
 void genWave(struct Wave* wave);                                     /* Generate random enemy wave         */
+void genPlayerDNA();                                                 /* Generate random strings            */
 /*---- Combo Functions ------------------------------------------------------------------------------------*/
 int checkForCombo();                                                 /* Checks if combo has been executed  */
 bool isViableCombo(struct Combo combo);                              /* Checks for combo conflict          */
@@ -569,6 +571,7 @@ void formatBlock(char* oldString, char* newString, int lineLength);  /* Format s
 void sliceIncertString(char* expression, char* incert, int location, int replacmentLen); /* Insert string  */
 FILE* writeFile(char* filePath);                                     /* Create writable file stream        */
 FILE* readFile(char* filePath);                                      /* Open readable file stream          */
+void genRandomName(char name[20], bool isSurname, bool gender);      /* Gen a random name                  */
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/
 void initCurses();                                                   /* Initalise Curses library           */
 void initColor();                                                    /* Initalise color for Curses         */
