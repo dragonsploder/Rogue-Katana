@@ -208,6 +208,12 @@ struct Player {
 
     struct Katana katanas[4];
 
+    int enemiesKilled;
+    int attacks;
+    int moves;
+    int katanasPickedUp;
+    int katanasBroken;
+
     char DNA[MAP_HEIGHT][MAP_WIDTH + 1];
 };
 
@@ -293,7 +299,6 @@ struct GameData {
     int currentNumberOfWaves;
     int turnOfLastEnemySpawn;
 
-
     int saveCheck;
 };
 
@@ -314,10 +319,10 @@ const char titleCard[NUMBER_OF_TITLE_CARD_LINES][100] = {
 
 #define NUMBER_OF_MENU_OPTIONS 4
 char menuOptions[NUMBER_OF_MENU_OPTIONS][50] = {
-    "New Game ",
-    "Load Game",
-    "Options  ",
-    "Quit     "
+    "New Game   ",
+    "Load Game  ",
+    "Leaderboard",
+    "Quit       "
 };
 
 #define NUMBER_OF_QUICK_HELP_LINES 17
@@ -593,4 +598,5 @@ void printEnemyInfo();                                               /* Info of 
 void printEntities();                                                /* Print player and enemies           */
 void printTilecard();                                                /* Print titlecard for main menu      */
 void printScoresFromScoresFile();                                    /* Print ordered list of scores       */
+void printDeathScreen();                                             /* Print death screen showing stats   */
 /*---- End of File ----------------------------------------------------------------------------------------*/

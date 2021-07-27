@@ -15,7 +15,7 @@
 #include <time.h>            /* Functions for date and time                                                */
 #include <string.h>          /* Functions for string manipulation                                          */
 #include <math.h>            /* General math functions                                                     */
-#include <ctype.h>          /* Char manipulation                                                          */
+#include <ctype.h>           /* Char manipulation                                                          */
 #include <unistd.h>          /* Misc                                                                       */
 #include <pdcurses/curses.h> /* Libraray for terminal manipulation                                         */
 #include "Katana.h"          /* Katana variables, arrays and structures                                    */
@@ -24,7 +24,7 @@
 
 void main(){
     long seed = time(NULL);
-    printf("Seed:%i\n", seed);
+    //printf("Seed:%i\n", seed);
     srand(seed);
 
     initCurses();
@@ -37,6 +37,11 @@ void main(){
     currentGameData.currentNumberOfFallenKatanas = 0;
     currentGameData.currentNumberOfWaves = 0;
     currentGameData.currentNumberOfEnemies = 0;
+    currentGameData.player.enemiesKilled = 0;
+    currentGameData.player.attacks = 0;
+    currentGameData.player.moves = 0;
+    currentGameData.player.katanasPickedUp = 0;
+    currentGameData.player.katanasBroken = 0;
 
     currentGameData.saveCheck = 572;
 
@@ -137,6 +142,12 @@ void mainMenu(){
 
             gameLoop();
             break;
+        }
+
+        case 2: {
+            printScoresFromScoresFile();
+            mainMenu();
+            return;
         }
     }
 }
@@ -319,24 +330,33 @@ void gameLoop() {
         //mvprintw(27, 0, "Current:%i", currentGameData.currentNumberOfDiscoveredCombos);
 
         command = myGetch();
+
+        if (command == KEY_ESC) {
+            printBox((MAP_HEIGHT/2) - 1, (MAP_WIDTH/2) - 13, (MAP_HEIGHT/2) + 1, (MAP_WIDTH/2) + 12, "*");
+            mvprintw((MAP_HEIGHT/2), (MAP_WIDTH/2) - 12, "Do you want to quit? (y)");
+            if (myGetch() == 'y') {
+                command = QUIT_KEY;
+            }
+        }
     } while (command != QUIT_KEY && currentGameData.player.health > 0);
     
     clearScreen();
     if (currentGameData.player.health > 0) {
-        char buffer[100];
+        printBoarder(false);
+        mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 7, "Save game? (y)");
+        if (myGetch() == 'y') {
+            char buffer[100];
+            printBoarder(false);
+            mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter save filename");
+            
+            if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+                return;
+            }
 
-        mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter save filename");
-        
-        if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
-            return;
+            saveGame(writeFile(buffer));
         }
-
-        saveGame(writeFile(buffer));
     } else {
-
-
-        mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 3, "Death");
-        myGetch();
+        printDeathScreen();
 
         saveScore();
         printScoresFromScoresFile();
@@ -605,6 +625,8 @@ void playerMove(struct Katana katana) {
         }
     }
 
+    currentGameData.player.moves++;
+
     currentGameData.player.location = newLocation;
 }
 
@@ -673,6 +695,8 @@ void attackEnemy(int enemyIndex, struct Katana* katana) {
     if (katana->sharpness < MIN_KATANA_SHARPNESS) {
         katana->sharpness = MIN_KATANA_SHARPNESS;
     }
+
+    currentGameData.player.attacks++;
 }
 
 void attackPlayer(int enemyIndex) {
@@ -760,6 +784,7 @@ void removeEnemy(int enemyIndex) {
         currentGameData.enemies[i] = currentGameData.enemies[i + 1];
     }
     currentGameData.currentNumberOfEnemies--;
+    currentGameData.player.enemiesKilled++;
 }
 
 void genKatana(struct Katana* katana, int setMovementType) {
@@ -1236,27 +1261,32 @@ void pickUpFallenKatana() {
         validAction = true;
         command = myGetch();
         switch (command) {
-        case TOP_LEFT_KATANA:
-            replaceKatana(0, fallenKatana);
-            break;
-        case TOP_RIGHT_KATANA:
-            replaceKatana(1, fallenKatana);
-            break;
-        case BOTTOM_LEFT_KATANA:
-            replaceKatana(2, fallenKatana);
-            break;
-        case BOTTOM_RIGHT_KATANA:
-            replaceKatana(3, fallenKatana);
-            break;
-        case BREAK_KATANA_KEY: /* Health boost */
-            currentGameData.player.health += myRand(fallenKatana.damage * 4);
-            if (currentGameData.player.health > PLAYER_START_HEALTH) {
-                currentGameData.player.health = PLAYER_START_HEALTH;
-            }
-            break;
-        default:
-            validAction = false;
-            break;
+            case TOP_LEFT_KATANA:
+                replaceKatana(0, fallenKatana);
+                currentGameData.player.katanasPickedUp++;
+                break;
+            case TOP_RIGHT_KATANA:
+                replaceKatana(1, fallenKatana);
+                currentGameData.player.katanasPickedUp++;
+                break;
+            case BOTTOM_LEFT_KATANA:
+                replaceKatana(2, fallenKatana);
+                currentGameData.player.katanasPickedUp++;
+                break;
+            case BOTTOM_RIGHT_KATANA:
+                replaceKatana(3, fallenKatana);
+                currentGameData.player.katanasPickedUp++;
+                break;
+            case BREAK_KATANA_KEY: /* Health boost */
+                currentGameData.player.health += myRand(fallenKatana.damage * 4);
+                if (currentGameData.player.health > PLAYER_START_HEALTH) {
+                    currentGameData.player.health = PLAYER_START_HEALTH;
+                }
+                currentGameData.player.katanasBroken++;
+                break;
+            default:
+                validAction = false;
+                break;
         }
     } while(!validAction);
 
@@ -1906,7 +1936,7 @@ void printPlayerData() {
 }
 
 void printHelp() {
-    clear();
+    clearScreen();
     for (int i = 0; i < NUMBER_OF_QUICK_HELP_LINES; i++) {
         mvprintw(i + 2, 1, quickHelpText[i]);
     }
@@ -1914,7 +1944,7 @@ void printHelp() {
 }
 
 void printComboReference() {
-    clear();
+    clearScreen();
 
     mvprintw(2, (MAP_WIDTH / 2) - 6, "Known combos:");
     for (int i = 0; i < currentGameData.currentNumberOfDiscoveredCombos; i++) {
@@ -2020,7 +2050,7 @@ void printScoresFromScoresFile() {
     int highestScoreIndex = 0;
     char buffer[50];
 
-    clear();
+    clearScreen();
 
     for (int i = 0; i < lineNumber; i++) {
         for (int j = 0; j < lineNumber; j++) {
@@ -2040,4 +2070,44 @@ void printScoresFromScoresFile() {
 
     printBoarder(false);
     getch();
+}
+
+void printDeathScreen() {
+    clearScreen();
+    printBoarder(false);
+
+    mvprintw(2, (SCREEN_WIDTH/2) - 3, "Death");
+
+    char buffer[500];
+
+    sprintf(buffer, "%s died on turn %i on wave %i after scoreing %i points. They were holding a %s, %s, %s, and %s. They attacked a total of %i times and killed a total of %i enemies. They moved %i times. They picked up %i katanas and broke %i of them. They discoved %i out of %i combos. May they rest in piece.",
+                    currentGameData.player.name, 
+                    currentGameData.turn, 
+                    currentGameData.currentNumberOfWaves, 
+                    currentGameData.score, 
+                    currentGameData.player.katanas[0].name, 
+                    currentGameData.player.katanas[1].name, 
+                    currentGameData.player.katanas[2].name, 
+                    currentGameData.player.katanas[3].name,
+                    currentGameData.player.attacks,
+                    currentGameData.player.enemiesKilled,
+                    currentGameData.player.moves,
+                    currentGameData.player.katanasPickedUp,
+                    currentGameData.player.katanasBroken,
+                    currentGameData.discoveredCombos,
+                    currentGameData.numberOfCombos);
+
+    char formatedBuffer[500];
+
+    formatBlock(&buffer[0], &formatedBuffer[0], SCREEN_WIDTH - 2);
+
+    for (int i = 0; i < SCREEN_HEIGHT - 4; i++) {
+        for (int j = 0; j < (SCREEN_WIDTH - 2); j++) {
+            if (formatedBuffer[(i * (SCREEN_WIDTH - 2)) + j] == 0) {
+                getch();
+                return;
+            }
+            mvprintw(i + 4, j + 1 , "%c", formatedBuffer[(i * (SCREEN_WIDTH - 2)) + j]);
+        }
+    }
 }
