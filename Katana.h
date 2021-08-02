@@ -103,8 +103,8 @@
 #define ENEMY_RESISTANCE_PERCENT          0.7
 #define TERRAIN_SYNERGY_PERCENT           1.3
 
-#define MAX_NUMBER_OF_ENEMIES             50
-#define ENEMY_LEVEL_CAP                   50
+#define MAX_NUMBER_OF_ENEMIES             25
+#define ENEMY_LEVEL_CAP                   20
 
 #define MAX_NUMBER_OF_COMBOS              10
 
@@ -112,21 +112,21 @@
 #define CHANCE_FOR_SHARPNESS_DECREASE     10
 
 #define MAX_NUMBER_OF_FALLEN_KATANAS      10
-#define CHANCE_FOR_FALLEN_KATANA          50
+#define CHANCE_FOR_FALLEN_KATANA          100
 
 #define CHANCE_FOR_HEALTH_INCREASE        3
 #define MAX_HEALTH_INCREASE               5
 
-#define TURNS_UNTIL_DIFFICULTY_INCREASE   200
+#define TURNS_UNTIL_DIFFICULTY_INCREASE   70
 #define TURNS_UNTIL_KATANA_POWER_INCREAS  120
 
-#define ENEMY_SPAWN_NUMBER_BASE           (myRand(5) + 5)
-#define ENEMY_GEN_PER_DIFFICULTY_INCREASE 3
+#define ENEMY_SPAWN_NUMBER_BASE           (myRand(3) + 3)
+#define ENEMY_GEN_PER_DIFFICULTY_INCREASE 2
 
 #define ENEMY_SPEED_GEN                   (abs(dice(3, 4) - 6))
-#define ENEMY_LEVEL_GEN                   (dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 1, 5))
-#define ENEMY_MAX_HEALTH_GEN              ((myRand(currentEnemy->level) + 1) * 5)
-#define ENEMY_DAMAGE_GEN                  (currentEnemy->level / 2)
+#define ENEMY_LEVEL_GEN                   (dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 1, 4) + 1)
+#define ENEMY_MAX_HEALTH_GEN              ((myRand(currentEnemy->level) + 1) * 2)
+#define ENEMY_DAMAGE_GEN                  (currentEnemy->level / (myRand(3) + 1))
            
 #define KATANA_MAX_DAMAGE 12
 //#define KATANA_DAMAGE_GEN                 (dice(1 + ((int) (currentGameData.turn/TURNS_UNTIL_KATANA_POWER_INCREAS)), 4) + 1)
@@ -143,7 +143,7 @@
 /* Bit Masks */
 #define CHECK_BIT(var, mask) ((mask & var) == mask)
 
-
+/*
 #define COMBO_FLAG_DOUBLE_ATTACK    0b0000000000000001
 #define COMBO_FLAG_FORCE_ATTACK     0b0000000000000010
 #define COMBO_FLAG_SCARE_ENEMIES    0b0000000000000100
@@ -168,6 +168,32 @@
 #define WAVE_FLAG_TWO_SIDES_SPAWN   0b0010000000000000
 #define WAVE_FLAG_THREE_SIDES_SPAWN 0b0100000000000000
 #define WAVE_FLAG_FOUR_SIDES_SPAWN  0b1000000000000000
+*/
+
+#define COMBO_FLAG_DOUBLE_ATTACK    1
+#define COMBO_FLAG_FORCE_ATTACK     2
+#define COMBO_FLAG_SCARE_ENEMIES    4
+
+
+#define WAVE_FLAG_ALL_AT_ONCE       1
+#define WAVE_FLAG_ONE_AT_A_TIME     2
+#define WAVE_FLAG_TWO_AT_A_TIME     4
+#define WAVE_FLAG_RAND_AT_A_TIME    8
+
+#define WAVE_FLAG_ONLY_ONE_TYPE     16
+#define WAVE_FLAG_ONLY_TWO_TYPES    32
+#define WAVE_FLAG_ONLY_THREE_TYPES  64
+#define WAVE_FLAG_ALL_TYPES         128
+
+#define WAVE_FLAG_2_TURN_DELAY      256
+#define WAVE_FLAG_5_TURN_DELAY      512
+#define WAVE_FLAG_7_TURN_DELAY      1024
+#define WAVE_FLAG_10_TURN_DELAY     2048
+ 
+#define WAVE_FLAG_ONE_SIDE_SPAWN    4096
+#define WAVE_FLAG_TWO_SIDES_SPAWN   8192
+#define WAVE_FLAG_THREE_SIDES_SPAWN 16384
+#define WAVE_FLAG_FOUR_SIDES_SPAWN  32768
 
 /* Structs */
 struct Vec2 {
@@ -506,9 +532,9 @@ struct ProtoCombo protoCombos[NUMBER_OF_PROTO_COMBOS] = {
     {3, 4, "Freeze", "Freezes all enemies for 6 turns"},
     {4, 3, "Swap", "Randomly swaps the location of 2 katanas"},
     {5, 3, "Boost", "Double the damage of your next attack"},
-    {6, 4, "Teleport", "Teleport to a random location"},
+    {6, 5, "Teleport", "Teleport to a random location"},
     {7, 3, "Force", "Force your next attack to ignore enemy resistance"},
-    {8, 4, "Scare", "Scare enemies into taking a step back"},
+    {8, 2, "Scare", "Scare enemies into taking a step back"},
 };
 
 /*
@@ -527,7 +553,7 @@ const char comboLocationToText[4] = {
 };
 
 /*==== Forward Function Decleration =======================================================================*/
-void main();                                                         /* Main function                      */
+int main();                                                          /* Main function                      */
 void mainMenu();                                                     /* Handels main menu screen           */
 void gameLoop();                                                     /* Game loop which runs every turn    */
 /*---- Find Functions -------------------------------------------------------------------------------------*/

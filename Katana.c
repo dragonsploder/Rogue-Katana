@@ -22,7 +22,7 @@
 /*---- Main Function --------------------------------------------------------------------------------------*/
 
 
-void main(){
+int main(){
     long seed = time(NULL);
     //printf("Seed:%i\n", seed);
     srand(seed);
@@ -97,9 +97,12 @@ void main(){
 
     mainMenu();
     stopCurses();
+
+    return 1;
 }
 
 void mainMenu(){
+    clearScreen();
     printBoarder(false);
     printTilecard();
 
@@ -388,12 +391,10 @@ int findClosestEnemy(){
 }
 
 double findDistanceToClosestEnemy(struct Vec2 location, bool pythagoras) {
-    int closestEnemy = 0;
     double closestEnemyDistance = MAP_HEIGHT + MAP_WIDTH;
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
         double currentEnemyDistance = findDistance(location, currentGameData.enemies[i].location, pythagoras);
         if (currentEnemyDistance < closestEnemyDistance) {
-            closestEnemy = i;
             closestEnemyDistance = currentEnemyDistance;
         }
     }
@@ -643,7 +644,7 @@ void enemyMovement(int enemyIndex) {
 
 
 
-    if (checkForEnemy(newLocation) == false) {
+    if (checkForEnemy(newLocation) == false && ((newLocation.y >= 0 && newLocation.y <= MAP_HEIGHT) && (newLocation.x >= 0 && newLocation.x <= MAP_WIDTH))) {
 
         currentEnemy->location = newLocation;
 
@@ -655,7 +656,7 @@ void enemyMovement(int enemyIndex) {
 
 void attackEnemy(int enemyIndex, struct Katana* katana) {
     double resistancePercent = 1.0;
-    if (katanaToTerrain[katana->type] == currentGameData.enemies[enemyIndex].type) {
+    if (katanaToEnemyResistance[katana->type] == currentGameData.enemies[enemyIndex].type) {
         resistancePercent = ENEMY_RESISTANCE_PERCENT;
     } 
 
@@ -778,7 +779,7 @@ void genEnemy(int type, int sideLocation) {
 }
 
 void removeEnemy(int enemyIndex) {
-    currentGameData.score += (int) ((float) currentGameData.enemies[enemyIndex].level * ( (float) currentGameData.turn / (float) TURNS_UNTIL_DIFFICULTY_INCREASE)); 
+    currentGameData.score += (int) ((float) currentGameData.enemies[enemyIndex].level * (( (float) currentGameData.turn / (float) TURNS_UNTIL_DIFFICULTY_INCREASE) + 1.0)); 
 
     for (int i = enemyIndex; i < currentGameData.currentNumberOfEnemies - 1; i++) {
         currentGameData.enemies[i] = currentGameData.enemies[i + 1];
@@ -792,6 +793,10 @@ void genKatana(struct Katana* katana, int setMovementType) {
 
     /* 1 - 12 */
     katana->damage = dice(3, 4);
+
+    if (katana->damage == 0) {
+        katana->damage++;
+    }
 
     //katana->damage = KATANA_DAMAGE_GEN;
 
@@ -891,8 +896,6 @@ void genCombo(int protoCombo) {
 }
 
 void genWave(struct Wave* wave) {
-    int baseEnemise = 5;
-    int additionEnemise = 5;
     wave->difficulty = ((int) (currentGameData.turn / TURNS_UNTIL_DIFFICULTY_INCREASE)) + 1;
 
     int flag1 = pow(2, myRand(4));
@@ -911,8 +914,8 @@ void genWave(struct Wave* wave) {
             typeTwo = myRand(4);
         } while (typeOne == typeTwo);
 
-        wave->enemiesToSpawn[typeOne] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 2;
-        wave->enemiesToSpawn[typeTwo] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 2;
+        wave->enemiesToSpawn[typeOne] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 2;
+        wave->enemiesToSpawn[typeTwo] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 2;
 
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ONLY_THREE_TYPES)) {
         int typeOne = myRand(4);
@@ -926,14 +929,14 @@ void genWave(struct Wave* wave) {
             typeThree = myRand(4);
         } while (typeThree == typeOne || typeThree == typeTwo);
 
-        wave->enemiesToSpawn[typeOne] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[typeTwo] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[typeThree] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeOne] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeTwo] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[typeThree] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 3;
     } else if (CHECK_BIT(wave->flags, WAVE_FLAG_ALL_TYPES)) {
-        wave->enemiesToSpawn[0] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[1] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[2] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
-        wave->enemiesToSpawn[3] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) * ENEMY_SPAWN_NUMBER_BASE) / 3;
+        wave->enemiesToSpawn[0] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 4;
+        wave->enemiesToSpawn[1] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 4;
+        wave->enemiesToSpawn[2] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 4;
+        wave->enemiesToSpawn[3] = ((wave->difficulty * ENEMY_GEN_PER_DIFFICULTY_INCREASE) + ENEMY_SPAWN_NUMBER_BASE) / 4;
     } else {
         ERROR("Wave flag bit error");
     }
@@ -1278,7 +1281,7 @@ void pickUpFallenKatana() {
                 currentGameData.player.katanasPickedUp++;
                 break;
             case BREAK_KATANA_KEY: /* Health boost */
-                currentGameData.player.health += myRand(fallenKatana.damage * 4);
+                currentGameData.player.health += fallenKatana.damage * 2 + (myRand(currentGameData.turn / TURNS_UNTIL_DIFFICULTY_INCREASE) * 5);
                 if (currentGameData.player.health > PLAYER_START_HEALTH) {
                     currentGameData.player.health = PLAYER_START_HEALTH;
                 }
@@ -1862,7 +1865,7 @@ void printKatanaDescription(struct Katana katana, bool fallenKatana) {
     if (katana.damageMod != 0) {
         sprintf(damageModBuffer,"  Damage Mod: %i  ", katana.damageMod);
     } else {
-        sprintf(damageModBuffer,"");
+        sprintf(damageModBuffer," ");
     }
     
     sprintf(buffer,"Damage: %i  %s  Movement Type: %s", katana.damage, damageModBuffer, katanaMovementTypeNames[katana.movementType]);
@@ -1930,6 +1933,9 @@ void printPlayerData() {
     attron(COLOR_PAIR(COLOR_RED));
     mvprintw(4, (int) (MAP_WIDTH * 0.25), "Hp:%i", currentGameData.player.health);
     mvprintw(4, (int) (MAP_WIDTH * 0.75), "Turn:%i", currentGameData.turn);
+
+    attron(COLOR_PAIR(terrainColor[currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type]));
+    mvprintw(5, (int) (MAP_WIDTH/2) - 1, "(%s)", terrainIcon[currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type]);
     
     attrset(A_NORMAL);
     
@@ -1983,7 +1989,7 @@ void printEnemyInfo() {
     } else {
         attron(A_STANDOUT);
         attron(COLOR_PAIR(enemyColor[currentGameData.enemies[closestEnemy].type]));
-        if (currentGameData.enemies[closestEnemy].level > 100) {
+        if (currentGameData.enemies[closestEnemy].level > ((currentGameData.turn / TURNS_UNTIL_DIFFICULTY_INCREASE) * 4)) {
             mvprintw(currentGameData.enemies[closestEnemy].location.y + 1, currentGameData.enemies[closestEnemy].location.x + 1, enemyIcon[currentGameData.enemies[closestEnemy].type]);
         } else {
             mvprintw(currentGameData.enemies[closestEnemy].location.y + 1, currentGameData.enemies[closestEnemy].location.x + 1, enemyIcon[currentGameData.enemies[closestEnemy].type + NUMBER_OF_ENEMY_TYPES]);
@@ -1998,7 +2004,8 @@ void printEnemyInfo() {
 void printEntities() {
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
         attron(COLOR_PAIR(enemyColor[currentGameData.enemies[i].type]));
-        if (currentGameData.enemies[i].level > 100) {
+        if (currentGameData.enemies[i].level > ((currentGameData.turn / TURNS_UNTIL_DIFFICULTY_INCREASE) * 4) ) {
+            /* Uppercase */
             mvprintw(currentGameData.enemies[i].location.y + 1, currentGameData.enemies[i].location.x + 1, enemyIcon[currentGameData.enemies[i].type]);
         } else {
             mvprintw(currentGameData.enemies[i].location.y + 1, currentGameData.enemies[i].location.x + 1, enemyIcon[currentGameData.enemies[i].type + NUMBER_OF_ENEMY_TYPES]);
@@ -2048,7 +2055,6 @@ void printScoresFromScoresFile() {
 
     int highestScore = 0;
     int highestScoreIndex = 0;
-    char buffer[50];
 
     clearScreen();
 
@@ -2080,7 +2086,7 @@ void printDeathScreen() {
 
     char buffer[500];
 
-    sprintf(buffer, "%s died on turn %i on wave %i after scoreing %i points. They were holding a %s, %s, %s, and %s. They attacked a total of %i times and killed a total of %i enemies. They moved %i times. They picked up %i katanas and broke %i of them. They discoved %i out of %i combos. May they rest in piece.",
+    sprintf(buffer, "%s died on turn %i on wave %i after scoreing %i points. They were holding a %s, %s, %s, and %s. They attacked a total of %i times and killed a total of %i enemies. They moved %i times. They picked up %i katana%sand broke %i of them. They discoved %i out of %i combos. May they rest in piece.",
                     currentGameData.player.name, 
                     currentGameData.turn, 
                     currentGameData.currentNumberOfWaves, 
@@ -2093,9 +2099,10 @@ void printDeathScreen() {
                     currentGameData.player.enemiesKilled,
                     currentGameData.player.moves,
                     currentGameData.player.katanasPickedUp,
+                    (currentGameData.player.katanasPickedUp==1 ?" ":"s "),
                     currentGameData.player.katanasBroken,
-                    currentGameData.discoveredCombos,
-                    currentGameData.numberOfCombos);
+                    currentGameData.currentNumberOfDiscoveredCombos - 1,
+                    currentGameData.numberOfCombos - 1);
 
     char formatedBuffer[500];
 
