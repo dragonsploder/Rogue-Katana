@@ -1,34 +1,34 @@
 /*---------------------------------------------------------------------------------------------------------*/
 /*                                                                                                         */
-/*  File    :   katana.h                                                                                   */
+/*  File    :   katana.c                                                                                   */
 /*  Author  :   Joshua Bourgeot                                                                            */
 /*  Date    :   14th January 2021                                                                          */
 /*  Function:   Katana, simple arcade-like game                                                            */
 /*                                                                                                         */
-/*---- Program Summary ------------------------------------------------------------------------------------*/
-/*                                                                                                         */
-/*     TBD                                                                                                 */
-/*                                                                                                         */
 /*---- Include Files --------------------------------------------------------------------------------------*/
-#include <stdlib.h>          /* General functions                                                          */
-#include <stdbool.h>         /* Definitions for bool type                                                  */
-#include <time.h>            /* Functions for date and time                                                */
-#include <string.h>          /* Functions for string manipulation                                          */
-#include <math.h>            /* General math functions                                                     */
-#include <ctype.h>           /* Char manipulation                                                          */
-#include <unistd.h>          /* Misc                                                                       */
-#include <pdcurses/curses.h> /* Libraray for terminal manipulation                                         */
-#include "Katana.h"          /* Katana variables, arrays and structures                                    */
+#include <stdlib.h>              /* General functions                                                      */
+#include <stdbool.h>             /* Definitions for bool type                                              */
+#include <time.h>                /* Functions for date and time                                            */
+#include <string.h>              /* Functions for string manipulation                                      */
+#include <math.h>                /* General math functions                                                 */
+#include <ctype.h>               /* Char manipulation                                                      */
+#include <unistd.h>              /* Misc                                                                   */
+#ifdef _WIN32                    /*                                                                        */
+    #include <pdcurses/curses.h> /* Libraray for terminal manipulation (Windows)                           */
+#else                            /*                                                                        */
+    #include <ncurses.h>         /* Libraray for terminal manipulation (Unix based systems)                */
+#endif                           /*                                                                        */
+#include "Katana.h"              /* Katana variables, arrays and structures                                */
 /*---- Main Function --------------------------------------------------------------------------------------*/
 
 
 int main(){
     long seed = time(NULL);
-    //printf("Seed:%i\n", seed);
     srand(seed);
 
     initCurses();
 
+    /* Init data values to defaults */
     currentGameData.score = 0;
     currentGameData.turn = 0;
     currentGameData.turnsToFreeze = 0;
@@ -53,7 +53,7 @@ int main(){
         currentGameData.previousMoves[i][2] = -1;
     }
 
-    strcpy(currentGameData.player.name, "Tanjiro"); // Gotta have that Demon Slayer reference
+    strcpy(currentGameData.player.name, "Tanjiro"); /* Gotta have that Demon Slayer reference */
     currentGameData.player.location = (struct Vec2) {MAP_HEIGHT/2, MAP_WIDTH/2};
     currentGameData.player.health = PLAYER_START_HEALTH;
     currentGameData.player.turnOfLastCombo = 0;
@@ -86,18 +86,14 @@ int main(){
         genCombo(newCombo);
     }
 
-
     genMap();
 
-    /*
-    for (int i = 0; i < 10; i++) {
-        //genEnemy();
-        genFallenKatana();
-    }*/
 
     mainMenu();
-    stopCurses();
 
+
+    /* Exit gracefully */
+    stopCurses();
     return 1;
 }
 
@@ -109,7 +105,7 @@ void mainMenu(){
     int choice = menu(menuOptions, NUMBER_OF_MENU_OPTIONS, NUMBER_OF_TITLE_CARD_LINES + 2, (SCREEN_WIDTH/2) - (strlen(menuOptions[0])/2));
 
     switch (choice) {
-        case 0: {
+        case 0: { /* New game */
             char buffer[20];
             clearScreen();
             mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 27, "Please enter your name. Leave blank for a random name");
@@ -127,8 +123,7 @@ void mainMenu(){
             gameLoop();
             break;
         }
-
-        case 1: {
+        case 1: { /* Load game */
             char buffer[100];
             clearScreen();
             do {
@@ -146,8 +141,7 @@ void mainMenu(){
             gameLoop();
             break;
         }
-
-        case 2: {
+        case 2: { /* Leaderboard */
             printScoresFromScoresFile();
             mainMenu();
             return;
@@ -170,59 +164,59 @@ void gameLoop() {
         infoKey = false;
         
         switch (command) {
-            case TOP_LEFT_KATANA: {
+            case TOP_LEFT_KATANA: { /* Use katana */
                 selectedKatana = 0;
                 break;
             }
-            case TOP_LEFT_KATANA_SECONDARY: {
+            case TOP_LEFT_KATANA_SECONDARY: { /* View info on katana */
                 selectedKatana = 0;
                 infoKey = true;
                 break;
             }
-            case TOP_RIGHT_KATANA: {
+            case TOP_RIGHT_KATANA: { /* Use katana */
                 selectedKatana = 1;
                 break;
             }
-            case TOP_RIGHT_KATANA_SECONDARY: {
+            case TOP_RIGHT_KATANA_SECONDARY: { /* View info on katana */
                 selectedKatana = 1;
                 infoKey = true;
                 break;
             }
-            case BOTTOM_LEFT_KATANA: {
+            case BOTTOM_LEFT_KATANA: { /* Use katana */
                 selectedKatana = 2;
                 break;
             }
-            case BOTTOM_LEFT_KATANA_SECONDARY: {
+            case BOTTOM_LEFT_KATANA_SECONDARY: { /* View info on katana */
                 selectedKatana = 2;
                 infoKey = true;
                 break;
             }
-            case BOTTOM_RIGHT_KATANA: {
+            case BOTTOM_RIGHT_KATANA: { /* Use katana */
                 selectedKatana = 3;
                 break;
             }
-            case BOTTOM_RIGHT_KATANA_SECONDARY: {
+            case BOTTOM_RIGHT_KATANA_SECONDARY: { /* View info on katana */
                 selectedKatana = 3;
                 infoKey = true;
                 break;
             }
 
-            case HELP_KEY: {
+            case HELP_KEY: { /* Print quick help screen */
                 infoKey = true;
                 break;
             } 
 
-            case COMBO_REFERNCE_KEY: {
+            case COMBO_REFERNCE_KEY: { /* Print combo screen */
                 infoKey = true;
                 break;
             }
 
-            case ENEMY_CHECK_KEY: {
+            case ENEMY_CHECK_KEY: { /* Info on closest enemy */
                 infoKey = true;
                 break;
             }
 
-            case PLAYER_DATA_KEY: {
+            case PLAYER_DATA_KEY: { /* Print player data screen */
                 infoKey = true;
                 break;
             }
@@ -232,7 +226,7 @@ void gameLoop() {
             }
         }
 
-        if (validMove && !noActionCommand && !infoKey) {
+        if (validMove && !noActionCommand && !infoKey) { /* Game turn */
             pushPreviousMove(currentGameData.player.katanas[selectedKatana].type, selectedKatana, currentGameData.player.katanas[selectedKatana].movementType);
             
             if (myRand(CHANCE_FOR_FALLEN_KATANA) == 0) {
@@ -276,7 +270,6 @@ void gameLoop() {
                     currentGameData.player.katanas[selectedKatana].numberOfMoves++;
 
                     /* Increase health when not attacking */
-                    // currentGameData.player.health = max(currentGameData.player.health += 5, PLAYER_START_HEALTH);
                     if (myRand(CHANCE_FOR_HEALTH_INCREASE) == 0) {
                         currentGameData.player.health += myRand(MAX_HEALTH_INCREASE - 1) + 1;
                     }
@@ -312,7 +305,7 @@ void gameLoop() {
         }
         printEntities();
 
-        if (infoKey) {
+        if (infoKey) { /* Non-game turn */
             if (selectedKatana != -1) {
                 printKatanaDescription(currentGameData.player.katanas[selectedKatana], false);
             } else if (command == HELP_KEY) {
@@ -327,10 +320,6 @@ void gameLoop() {
                 ERROR("Invalid info key");
             }
         }
-        
-        //mvprintw(30, 0, "i:%i", currentGameData.currentWave.flags);
-        //mvprintw(26, 0, "Max:%i", currentGameData.numberOfCombos);
-        //mvprintw(27, 0, "Current:%i", currentGameData.currentNumberOfDiscoveredCombos);
 
         command = myGetch();
 
@@ -344,7 +333,7 @@ void gameLoop() {
     } while (command != QUIT_KEY && currentGameData.player.health > 0);
     
     clearScreen();
-    if (currentGameData.player.health > 0) {
+    if (currentGameData.player.health > 0) { /* Option to save game if player still alive */
         printBoarder(false);
         mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 7, "Save game? (y)");
         if (myGetch() == 'y') {
@@ -367,12 +356,11 @@ void gameLoop() {
 }
 
 /* Find functions */
-
-
 double findDistance(struct Vec2 start, struct Vec2 end, bool pythagoras) {
+    /* Pythagoras is only used in the player retreat movement code as it gives better results. Chebyshev distance used insted */
     if (pythagoras) {
         return sqrt(pow(end.y - start.y, 2) + pow(end.x - start.x, 2));
-    } else {
+    } else { 
         return fmax(abs(end.y - start.y), abs(end.x - start.x));
     }
 }
@@ -402,6 +390,7 @@ double findDistanceToClosestEnemy(struct Vec2 location, bool pythagoras) {
 }
 
 struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse) {
+    /* Extremely simple pathfinding */
     struct Vec2 step = start;
 
     if (abs(end.x - start.x) < MAP_HEIGHT) {
@@ -428,6 +417,7 @@ struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse) {
 }  
 
 bool findNearbyEnemies(struct Vec2 loc, int (*enemies)[8], int *number) {
+    /* Find enemies on adjacent tiles */
     *number = 0;
     for (int i = 0; i < currentGameData.currentNumberOfEnemies; i++) {
         if (findDistance(loc, currentGameData.enemies[i].location, false) == 1) {
@@ -439,12 +429,11 @@ bool findNearbyEnemies(struct Vec2 loc, int (*enemies)[8], int *number) {
 }
 
 /* Movement */
-
 void playerMove(struct Katana katana) {
     struct Vec2 newLocation = currentGameData.player.location;
 
     switch (katana.movementType) {
-        case MOVEMENT_STRIKE: {
+        case MOVEMENT_STRIKE: { /* Move to strongest enemy */
             if (currentGameData.currentNumberOfEnemies == 0) {
                 break;
             }
@@ -459,7 +448,7 @@ void playerMove(struct Katana katana) {
             break;
         }
 
-        case MOVEMENT_BERSERK: {
+        case MOVEMENT_BERSERK: { /* Move to the closest enemy */
             if (currentGameData.currentNumberOfEnemies == 0) {
                 break;
             }
@@ -477,7 +466,8 @@ void playerMove(struct Katana katana) {
             break;
         }
         
-        case MOVEMENT_RETREAT: { /* I can't think of a better way to do this */
+        case MOVEMENT_RETREAT: { /* Move away from the most enemies */
+            /* I can't think of a better way to do this */
             if (currentGameData.currentNumberOfEnemies == 0) {
                 break;
             }
@@ -567,7 +557,8 @@ void playerMove(struct Katana katana) {
             break;
         }
         
-        case MOVEMENT_RETURN: { /* This could be more efficient, I know */
+        case MOVEMENT_RETURN: { /* Attempt to move to terrain matching katana type */
+            /* This could be more efficient, I know */
             struct Vec2 closestTerrain = (struct Vec2) {0, 0};
             int closestTerrainDistance = MAP_HEIGHT + MAP_WIDTH;
             for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -585,11 +576,12 @@ void playerMove(struct Katana katana) {
             break;
         }
         
-        case MOVEMENT_DEFEND: {
+        case MOVEMENT_DEFEND: { /* Don't move */
             break;
         }
 
-        case MOVEMENT_FALLEN: { /* This too could be more efficient */
+        case MOVEMENT_FALLEN: { /* Attempt to move to closest fallen katana */
+            /* This too could be more efficient */
             if (currentGameData.currentNumberOfFallenKatanas == 0) {
                 break;
             }
@@ -611,7 +603,7 @@ void playerMove(struct Katana katana) {
             break;
         }
         
-        case MOVEMENT_RAND: {
+        case MOVEMENT_RAND: { /* Move in random direction */
             do {
                 newLocation = currentGameData.player.location;
                 newLocation.y += myRand(3) - 1;
@@ -633,7 +625,6 @@ void playerMove(struct Katana katana) {
 
 void enemyMovement(int enemyIndex) {
     struct Enemy* currentEnemy = &currentGameData.enemies[enemyIndex];
-
     struct Vec2 newLocation;
 
     if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_SCARE_ENEMIES)) {
@@ -642,24 +633,19 @@ void enemyMovement(int enemyIndex) {
         newLocation = pathFinding(currentEnemy->location, currentGameData.player.location, false);
     }
 
-
-
     if (checkForEnemy(newLocation) == false && ((newLocation.y >= 0 && newLocation.y <= MAP_HEIGHT) && (newLocation.x >= 0 && newLocation.x <= MAP_WIDTH))) {
-
         currentEnemy->location = newLocation;
-
         currentEnemy->lastMovementTurn = currentGameData.turn;
     }
 }
 
 /* Attacking */
-
 void attackEnemy(int enemyIndex, struct Katana* katana) {
+
     double resistancePercent = 1.0;
     if (katanaToEnemyResistance[katana->type] == currentGameData.enemies[enemyIndex].type) {
         resistancePercent = ENEMY_RESISTANCE_PERCENT;
     } 
-
     if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_FORCE_ATTACK)) {
         resistancePercent = 1.0;
         currentGameData.comboFlags ^= COMBO_FLAG_FORCE_ATTACK;
@@ -671,11 +657,8 @@ void attackEnemy(int enemyIndex, struct Katana* katana) {
         synergyPercent = TERRAIN_SYNERGY_PERCENT;
     } 
 
-
-
-
     double damage = ((double) (katana->damage + myRand(katana->damageMod)) * resistancePercent * synergyPercent) * ((double) katana->sharpness / 100.0);
-
+    
     if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_DOUBLE_ATTACK)) {
         damage *= 2;
         currentGameData.comboFlags ^= COMBO_FLAG_DOUBLE_ATTACK;
@@ -689,7 +672,6 @@ void attackEnemy(int enemyIndex, struct Katana* katana) {
     }
 
     int chanceForSharpnessDecrease = myRand(CHANCE_FOR_SHARPNESS_DECREASE);
-
     if (chanceForSharpnessDecrease > CHANCE_FOR_SHARPNESS_DECREASE/2) {
         katana->sharpness -= (chanceForSharpnessDecrease - (CHANCE_FOR_SHARPNESS_DECREASE/2));
     }
@@ -706,15 +688,12 @@ void attackPlayer(int enemyIndex) {
 
 
 /* Generators & Destructors */
-
 void genEnemy(int type, int sideLocation) {
     if (currentGameData.currentNumberOfEnemies < MAX_NUMBER_OF_ENEMIES) {
         struct Enemy *currentEnemy = &currentGameData.enemies[currentGameData.currentNumberOfEnemies];
 
-
         currentEnemy->type = type;
 
-        // Speed not effected by level
         currentEnemy->speed = ENEMY_SPEED_GEN;
 
         currentEnemy->level = ENEMY_LEVEL_GEN;
@@ -728,24 +707,12 @@ void genEnemy(int type, int sideLocation) {
 
         currentEnemy->damage = ENEMY_DAMAGE_GEN;
 
-        /*
-        //currentEnemy->speed = abs(dice(3, 4) - 6);
-        currentEnemy->speed = dice(2, 2);
-        //currentEnemy->speed = 4;
-
-        currentEnemy->maxHeath = dice(4, 5);
-        currentEnemy->health = currentEnemy->maxHeath;
-        currentEnemy->damage = dice(2, 5);
-        currentEnemy->level = currentGameData.enemies[currentGameData.currentNumberOfEnemies].health * currentGameData.enemies[currentGameData.currentNumberOfEnemies].damage;
-        */
-
         struct Vec2 location = (struct Vec2) {0, 0};
 
-        // Simple way to avoid infinate loop
+        /* Simple way to avoid infinite loop */
         int tests = 50;
         do {
             tests--;
-            //switch (myRand(4)) {
             switch (sideLocation) {
                 case 0: {/* Right */
                     location.y = myRand(MAP_HEIGHT);
@@ -791,17 +758,16 @@ void removeEnemy(int enemyIndex) {
 void genKatana(struct Katana* katana, int setMovementType) {
     katana->type = myRand(NUMBER_OF_KATANA_TYPES);
 
-    /* 1 - 12 */
-    katana->damage = dice(3, 4);
-
+    katana->damage = KATANA_DAMAGE_GEN;
     if (katana->damage == 0) {
         katana->damage++;
     }
 
-    //katana->damage = KATANA_DAMAGE_GEN;
-
-    /* 0 - 6 */
     katana->damageMod = KATANA_DAMAGE_MOD_GEN;
+
+    if (katana->damageMod > MAX_KATANA_DAMAGE_MOD) {
+        katana->damageMod = MAX_KATANA_DAMAGE_MOD;
+    }
 
     if (setMovementType == -1) {
         katana->movementType = myRand(NUMBER_OF_MOVEMENT_TYPES);
@@ -818,13 +784,7 @@ void genKatana(struct Katana* katana, int setMovementType) {
     sprintf(katana->name, "%s%s", katanaNameType[katana->type], katanaNameDamage[katana->damage - 1]);
 
 
-
     /* Image */
-
-
-
-
-
     int guardType = myRand(NUMBER_OF_KATANA_GUARD_TYPES);
     sprintf(katana->katanaImage[0], "    %s", katanaGuardTypes[guardType][0]);
     sprintf(katana->katanaImage[1], "%s%s%s%s", katanaHiltTypes[myRand(NUMBER_OF_KATANA_HILT_TYPES)], katanaGuardTypes[guardType][1], katanaBladeBodyTypes[myRand(NUMBER_OF_KATANA_BLADE_BODY_TYPES)], katanaBladeTipTypes[myRand(NUMBER_OF_KATANA_BLADE_TIP_TYPES)]);
@@ -940,12 +900,11 @@ void genWave(struct Wave* wave) {
     } else {
         ERROR("Wave flag bit error");
     }
-    //wave->enemiesToSpawn = (difficulty) * 2 + myRand(difficulty * 3);
     currentGameData.currentNumberOfWaves++;
 }
 
 void genPlayerDNA() {
-    char nucleotides[63] = "!#$^*()+=-[]{}|\\/:<>XO'~.ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+    char nucleotides[62] = "!#$^*()+=-[]{}|\\/:<>XO'~.ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
 
     for (int i = 0; i < MAP_HEIGHT; i++) {
         for (int j = 0; j < MAP_WIDTH; j++) {
@@ -975,11 +934,14 @@ int checkForCombo(){
     return -1;
 }
 
-
 bool isViableCombo(struct Combo combo) {
+    /* New combos can't have existing ones exist in side of them, nor can they exist in existing ones either. */
+    /* Otherwise the game wouldn't be able to tell which combo the player was trying to use. */
+    /* This function takes care of checking for that */
+
     for (int i = 0; i < currentGameData.numberOfCombos; i++) {
         int comboLengthDifference = currentGameData.combos[i].length - combo.length;
-        if (comboLengthDifference > 0) { // New combo smaller
+        if (comboLengthDifference > 0) { /* New combo is smaller */
             for (int j = 0; j < comboLengthDifference + 1; j++) {
                 bool comboMach = true;
                 for (int k = 0; k < combo.length; k++) {
@@ -991,7 +953,7 @@ bool isViableCombo(struct Combo combo) {
                     return false;
                 }
             }
-        } else if (comboLengthDifference < 0) { // New combo bigger
+        } else if (comboLengthDifference < 0) { /* New combo is bigger */
             for (int j = 0; j < (-comboLengthDifference) + 1; j++) {
                 bool comboMach = true;
                 for (int k = 0; k < currentGameData.combos[i].length; k++) {
@@ -1003,7 +965,7 @@ bool isViableCombo(struct Combo combo) {
                     return false;
                 }
             }
-        } else { // Same len
+        } else { /* New combo is the same length */
             bool comboMach = true;
             for (int k = 0; k < combo.length; k++) {
                 if (combo.combo[k] != currentGameData.combos[i].combo[k]) {
@@ -1017,7 +979,6 @@ bool isViableCombo(struct Combo combo) {
     }
     return true;
 }
-
 
 void activateCombo(int comboIndex) {
     if (comboIndex == -1) {
@@ -1055,7 +1016,7 @@ void activateCombo(int comboIndex) {
             break;
         }
 
-        case 2: { /* Terriform */
+        case 2: { /* Terraform */
             int newTerrain;
             do {
                 newTerrain = myRand(NUMBER_OF_TERRAIN_TYPES);
@@ -1107,8 +1068,6 @@ void activateCombo(int comboIndex) {
             currentGameData.comboFlags = (currentGameData.comboFlags | COMBO_FLAG_SCARE_ENEMIES);
             break;
         }
-        
-
 
         default: {
             ERROR("Invalid combo index");
@@ -1123,7 +1082,6 @@ void activateCombo(int comboIndex) {
     }
 
     char buffer[50];
-
     if (beenDiscovered) {
         sprintf(buffer, "%s combo activated", protoCombos[currentGameData.combos[comboIndex].infoIndex].title);
     } else {
@@ -1134,7 +1092,8 @@ void activateCombo(int comboIndex) {
 
     update(buffer, true);
 }
- 
+
+
 /* Misc Functions */
 int getStringInput(int y, int x, bool center, char* buffer) {
     int input;
@@ -1160,27 +1119,21 @@ int getStringInput(int y, int x, bool center, char* buffer) {
         }
 
         input = myGetch();
-
-
         switch(input) {
             case KEY_ESC: {
                 return -1;
             }
-
             case ACCEPT_KEY: {
                 break;
             }
-
             case LEFT_ARROW_KEY: {
                 currentCharIndex--;
                 break;
             }
-
             case RIGHT_ARROW_KEY: {
                 currentCharIndex++;
                 break;
             }
-
             case KEY_BACKSPACE: {
                 if (currentCharIndex == 0) {
                     break;
@@ -1194,8 +1147,6 @@ int getStringInput(int y, int x, bool center, char* buffer) {
                 currentCharIndex--;
                 break;
             }
-
-
             default: {
                 for (int i = currentBufferSize; i > currentCharIndex; i--){
                     buffer[i] = buffer[i - 1];
@@ -1214,15 +1165,14 @@ int getStringInput(int y, int x, bool center, char* buffer) {
         } else if (currentCharIndex >= currentBufferSize) {
             currentCharIndex = currentBufferSize - 1;
         }
-
         buffer[currentBufferSize] = '\0';
 
     } while(input != ACCEPT_KEY);
+
     buffer[currentBufferSize - 1] = '\0';
 
     return 1;
 }
-
 
 bool doesEnemyMoveThisTurn(int enemy) {
     bool enemyToMove;
@@ -1231,7 +1181,6 @@ bool doesEnemyMoveThisTurn(int enemy) {
     } else {
         enemyToMove = (currentGameData.turn - currentGameData.enemies[enemy].lastMovementTurn >= (currentGameData.enemies[enemy].speed - 1));
     }
-    //printf("Turn: %i, Speed: %i, Moved: %i\n", currentGameData.turn, currentGameData.enemies[enemy].speed, enemyToMove);
     return enemyToMove;
 }
 
@@ -1297,7 +1246,6 @@ void pickUpFallenKatana() {
     currentGameData.currentNumberOfFallenKatanas--;
 }
 
-
 void enemyWave() {
     int totalEnemies = 0 ;
     for (int i = 0; i < NUMBER_OF_ENEMY_TYPES; i++) {
@@ -1310,7 +1258,6 @@ void enemyWave() {
         sprintf(buffer, "Wave %i approaches.", currentGameData.currentNumberOfWaves);
         update(&buffer[0], true);
     }
-
 
     int turnDelay;
     if (CHECK_BIT(currentGameData.currentWave.flags, WAVE_FLAG_2_TURN_DELAY)) {
@@ -1378,25 +1325,20 @@ void enemyWave() {
                 location = myRand(4);
             } while (locations[location] == -1); 
 
-
             genEnemy(type, locations[location]);
 
             currentGameData.currentWave.enemiesToSpawn[type]--;
         }
-
     }
 }
 
-
 int menu(char options[][50], int numberOfOptions, int yOffset, int xOffset) {
     int currentSelection = 0;
-
 
     attron(COLOR_PAIR(COLOR_WHITE));
     attrset(A_NORMAL);
 
     while (true) {
-
         for (int i = 0; i < numberOfOptions; i++) {
             if (currentSelection == i) {
                 attron(A_STANDOUT);
@@ -1406,7 +1348,6 @@ int menu(char options[][50], int numberOfOptions, int yOffset, int xOffset) {
         }
 
         int input = myGetch();
-
         switch (input) {
             case UP_ARROW_KEY:
                 currentSelection--;
@@ -1431,35 +1372,8 @@ int menu(char options[][50], int numberOfOptions, int yOffset, int xOffset) {
         } else if (currentSelection >= numberOfOptions) {
             currentSelection = numberOfOptions - 1;
         }
-
     }
 }
-/*
-void saveGame(FILE* fileToSaveTo) {
-    if (fileToSaveTo != NULL) {
-        fwrite(&currentGameData, sizeof(struct GameData), 1, fileToSaveTo);
-        fclose(fileToSaveTo);
-    } else {
-        ERROR("fileToSaveTo is NULL");
-    }
-}
-
-int loadGame(FILE* fileToLoadFrom) {
-    if (fileToLoadFrom != NULL) {
-        fread(&currentGameData, sizeof(struct GameData), 1, fileToLoadFrom);
-        fclose(fileToLoadFrom);
-    } else {
-        ERROR("fileToLoadFrom is NULL");
-    }
-
-    if (currentGameData.saveCheck != 572) {
-        return -1;
-    }
-
-    return 1; 
-    
-}
-*/
 
 void saveGame(FILE* fileToSaveTo) {
     fwrite(&currentGameData, sizeof(struct GameData), 1, fileToSaveTo);
@@ -1476,7 +1390,6 @@ int loadGame(FILE* fileToLoadFrom) {
     }
 
     return 1; 
-    
 }
 
 void saveScore() {
@@ -1487,9 +1400,9 @@ void saveScore() {
     fclose(scoresFile);
 }
 
-/* Simple name generator, used for first, last, and city names. */
-/* Based off of: http://arns.freeservers.com/workshop38.html    */
 void genRandomName(char name[20], bool isSurname, bool gender){
+    /* Simple name generator */
+    /* Based off of: http://arns.freeservers.com/workshop38.html */
     char vowels[] = "aaaeeeiiou";
     int vowelsLen = 10;
     char consonants[] = "bbbcdddffgghjkllmmmnnnppqrrssstttvwxyz";
@@ -1502,7 +1415,6 @@ void genRandomName(char name[20], bool isSurname, bool gender){
     }
 
     int nameLen = myRand(3) + 1;
-
     for (int i = 0; i < nameLen; i++){
         strncat(name, &vowels[myRand(vowelsLen)], 1);
         strncat(name, &consonants[myRand(consonantsLen)], 1);
@@ -1518,6 +1430,7 @@ void genRandomName(char name[20], bool isSurname, bool gender){
     name[0] = toupper(name[0]);
 }
 
+
 /* Utility Functions */
 int myRand(int number) {
     if (number > 0) {
@@ -1526,13 +1439,13 @@ int myRand(int number) {
     return 0;
 }
 
-int dice(int number, int sides) {
+int dice(int number, int sides) { 
+    /* Roll "number" dice with sides 0-"sides" and add all the numbers up */
     sides++;
     int total = 0;
     for (int i = 0; i < number; i++) {
         total += myRand(sides);
     }
-    
     return total;
 }
 
@@ -1580,8 +1493,6 @@ void formatBlock(char* oldString, char* newString, int lineLength) {
                 }
                 for (int j = temp; j < i; j++){
                     sliceIncertString(newString, " ", j, 0);
-                    
-                    
                 }
                 offset += (i - temp);
             }
@@ -1602,8 +1513,6 @@ FILE* readFile(char* filePath) {
 
 
 /* Curses IO Functions */
-
-
 void initColor(){
     /* Alow the use of color */
     use_default_colors();
@@ -1618,7 +1527,6 @@ void initColor(){
     init_pair(COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
 }
 
-
 void initCurses(){
     /* Init curses */
     initscr(); 
@@ -1632,26 +1540,20 @@ void initCurses(){
     curs_set(0);
 
     initColor();
-
-    /* nodelay(stdscr, true); */
 }
-
 
 void stopCurses(){
-    // Gracefully stop curses
+    /* Gracefully stop curses */
     endwin();
 }
-
 
 int myGetch(){
     return getch();
 }
 
-
 void clearScreen(){
     erase();
 }
-
 
 void printHorizontalLine(int y, int start, int stop, char* toPrint){
     for (int i = start; i <= stop; i++){
@@ -1659,13 +1561,11 @@ void printHorizontalLine(int y, int start, int stop, char* toPrint){
     }
 }
 
-
 void printVerticalLine(int x, int start, int stop, char* toPrint){
     for (int i = start; i <= stop; i++){
         mvprintw(i, x, toPrint);
     }
 }
-
 
 void printBox(int y, int x, int stopY, int stopX, char* toPrint){
     for (int i = y; i <= stopY; i++){
@@ -1679,7 +1579,6 @@ void update(char* message, bool pause){
     int messageLineLength = SCREEN_WIDTH - 18;
 
     formatBlock(message, formatedMessage, messageLineLength);
-
 
     char mainBuffer[SCREEN_WIDTH - 2];
     char secondaryBuffer[messageLineLength + 1];
@@ -1713,7 +1612,6 @@ void update(char* message, bool pause){
     }
 }
 
-
 void printBoarder(bool printMiddle){
     printVerticalLine(0, 0, SCREEN_HEIGHT - 1, "|");
     printVerticalLine(SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1, "|");
@@ -1728,6 +1626,7 @@ void printBoarder(bool printMiddle){
         if (healthAsIcons > 0 && healthAsIcons < 1) {
             healthAsIcons = 1;
         }
+
         printHorizontalLine(SCREEN_HEIGHT / 3, 1, (SCREEN_WIDTH / 2) - 1, "-");
         printHorizontalLine(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (int) healthAsIcons - 1, (SCREEN_WIDTH / 2) - 1, "=");
 
@@ -1747,8 +1646,6 @@ void printBoarder(bool printMiddle){
         attrset(A_NORMAL);
     }
 
-
-
     printHorizontalLine(SCREEN_HEIGHT - 1, 0, SCREEN_WIDTH - 1, "-");
 
     mvprintw(0, 0, "+");
@@ -1762,7 +1659,6 @@ void printBoarder(bool printMiddle){
     mvprintw(SCREEN_HEIGHT - 1, 0, "+");
     mvprintw(SCREEN_HEIGHT - 1, SCREEN_WIDTH - 1, "+");
 }
-
 
 void printKatana(struct Katana katana, int position) {
     int katanaInfoBoxHeight = (SCREEN_HEIGHT / 3) - 2;
@@ -1816,7 +1712,6 @@ void printKatana(struct Katana katana, int position) {
     printHorizontalLine(topLeftCorner.y, topLeftCorner.x, topRightCorner.x, "-");
     printHorizontalLine(bottomLeftCorner.y, topLeftCorner.x, topRightCorner.x, "-");
 
-    
     mvprintw(topLeftCorner.y, topLeftCorner.x, &katanaCornerIcon[katana.type][0]);
     mvprintw(topRightCorner.y, topRightCorner.x, &katanaCornerIcon[katana.type][0]);
     mvprintw(bottomRightCorner.y, bottomRightCorner.x, &katanaCornerIcon[katana.type][0]);
@@ -1824,10 +1719,8 @@ void printKatana(struct Katana katana, int position) {
 
     attrset(A_NORMAL);
 
-
     char buffer[katanaInfoBoxWidth - 2];
 
-    
     mvprintw(topLeftCorner.y + 1, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(katana.name)/2), katana.name);
     
     sprintf(buffer,"Dammage: %i", katana.damage);
@@ -1840,8 +1733,6 @@ void printKatana(struct Katana katana, int position) {
 
     sprintf(buffer, "Movement Type: %s", katanaMovementTypeNames[katana.movementType]);
     mvprintw(topLeftCorner.y + 5, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
-    
-    
 }
 
 void printKatanaDescription(struct Katana katana, bool fallenKatana) {
@@ -1869,13 +1760,11 @@ void printKatanaDescription(struct Katana katana, bool fallenKatana) {
     }
     
     sprintf(buffer,"Damage: %i  %s  Movement Type: %s", katana.damage, damageModBuffer, katanaMovementTypeNames[katana.movementType]);
-
     mvprintw(2, (MAP_WIDTH/2) - (strlen(buffer)/2), buffer);
 
     if (!fallenKatana) {
         sprintf(buffer, "Sharpness: %i", katana.sharpness);
         mvprintw(4, 2, buffer);
-
 
         sprintf(buffer, "Movement uses: %i", katana.numberOfMoves);
         mvprintw(4, MAP_WIDTH - 20, buffer);
@@ -1886,7 +1775,6 @@ void printKatanaDescription(struct Katana katana, bool fallenKatana) {
         sprintf(buffer, "Kills: %i", katana.numberOfKills);
         mvprintw(6, MAP_WIDTH - 20, buffer);
     }
-
 
     attron(COLOR_PAIR(katanaColor[katana.type]));
 
@@ -1938,7 +1826,6 @@ void printPlayerData() {
     mvprintw(5, (int) (MAP_WIDTH/2) - 1, "(%s)", terrainIcon[currentGameData.map[currentGameData.player.location.y][currentGameData.player.location.x].type]);
     
     attrset(A_NORMAL);
-    
 }
 
 void printHelp() {
@@ -1969,16 +1856,13 @@ void printComboReference() {
         }
 
         mvprintw((i * 2) + 4, MAP_WIDTH - 4 - strlen(buffer), "%s", buffer);
-
         mvprintw((i * 2) + 5, 8, protoCombos[currentGameData.combos[currentGameData.discoveredCombos[i]].infoIndex].description);
     }
 
     printBoarder(false);
-    
 }
 
 void printEnemyInfo() {
-    
     int closestEnemy = findClosestEnemy();
 
     char buffer[50];
@@ -1998,7 +1882,6 @@ void printEnemyInfo() {
     }
     printHorizontalLine(SCREEN_HEIGHT / 3, 1, SCREEN_WIDTH - 2, " ");
     mvprintw(SCREEN_HEIGHT / 3, (SCREEN_WIDTH / 2) - (strlen(buffer) / 2), buffer);
-
 }
 
 void printEntities() {
@@ -2040,9 +1923,6 @@ void printScoresFromScoresFile() {
     scoresFile = fopen("Scores","r");
 
     while ((read = getline(&line, &length, scoresFile)) != -1) {
-        
-        //scoresName[lineNumber] = strtok(line, " - ");
-        //strcpy(&scoresName[lineNumber][0], strtok(line, " - "));
         strcpy(&scores[lineNumber][0], line);
         strtok(line, " - ");
         scoresValue[lineNumber] = atoi(strtok(NULL, " - "));
@@ -2066,6 +1946,7 @@ void printScoresFromScoresFile() {
             }
         }
         mvprintw(i + 1, (MAP_WIDTH/2 - strlen(scores[highestScoreIndex])/2), "%s", scores[highestScoreIndex]);
+        
         scoresValue[highestScoreIndex] = 0;
         highestScore = 0;
 
@@ -2085,7 +1966,6 @@ void printDeathScreen() {
     mvprintw(2, (SCREEN_WIDTH/2) - 3, "Death");
 
     char buffer[500];
-
     sprintf(buffer, "%s died on turn %i on wave %i after scoreing %i points. They were holding a %s, %s, %s, and %s. They attacked a total of %i times and killed a total of %i enemies. They moved %i times. They picked up %i katana%sand broke %i of them. They discoved %i out of %i combos. May they rest in piece.",
                     currentGameData.player.name, 
                     currentGameData.turn, 

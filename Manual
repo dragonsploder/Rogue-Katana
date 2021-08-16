@@ -1,0 +1,275 @@
+                    _   __  ___ _____ ___   _   _   ___  
+                   | | / / / _ \_   _/ _ \ | \ | | / _ \ 
+                   | |/ / / /_\ \| |/ /_\ \|  \| |/ /_\ \
+                   |    \ |  _  || ||  _  ||     ||  _  |
+                   | |\  \| | | || || | | || |\  || | | |
+                   \_| \_/\_| |_/\_/\_| |_/\_| \_/\_| |_/ 
+                             by Joshua Bourgeot
+                                  8-07-2021    
++------------------------------------------------------------------------------+
+
+1. Introduction
+
+    Katana is a simple arcade-ish roguelike I wrote over a few months in my 
+junior year of high school. The idea was to finally finish a game and make it
+really polished. Most of my projects up until then had been given up on or
+felt more like demos than games. To that end, I decided to come up with a  
+relatively simple idea for a game and make sure I saw it through to completion.
+Thus Katana was born. The overarching ideas governing the game are: arcade-ish
+roguelike, non-direct movement, and a high level of polish. The first point is
+show by Katana's procedurally generated map and katanas, permedeath, and score
+system. The second point comes through with movement being selected by type
+(e.g. strike) rather then a specific direction. Finally the game has nice 
+features like saving and loading which give it a bit of polish. Katana was a
+really fun game to work on, and I hope those who play it enjoy it at least a
+little bit.
+
+2. So What Is Going On?
+
+    Katana is a high score game. You will die eventually no matter what, but
+hopefully you can kill a fair bit of monsters before you finally bite the dust.
+It is also a roguelike (well probably a roguelite), so its map is made up of 
+ASCII characters, with the @ symbol representing the player, letters
+representing monsters, and other characters representing the terrain. You start 
+with four katanas at your disposal, each with their own type, attack damage, 
+and movement type. Selecting a katana while next to an monster will attack it, 
+while selecting one when no monsters are present will cause you to move based 
+on the movement type. When you kill a monster your score is increased 
+proportionally to the difficulty of the monster, and when the monsters bring 
+your health down to zero the game ends and your score is recorded. Each katana 
+has a specific type (e.g. fire). Different types of katanas work better on 
+different types of terrain, and different monsters are resistant to different 
+katanas. For example, a ice katana (+) works better on water (~), but worse 
+against fluid type monsters (f). Thus the game becomes a series of puzzles 
+about which katana will work best in each situation. To make things more 
+interesting katanas will dull over time, lessening in attack damage. To 
+compensate, katanas will periodicity fall from the sky. When a player steps on 
+one of these, they can pick it up and replace one of their less effective 
+katanas. Finally there are several katana combos in each game, which will do 
+things like double the damage of your next attack or give a small health boost.
+
+3. Quick Start
+
+        Launch Katana and select 'New Game'. Hit enter to give your character a
+    random name and start the game.
+
+        Most of you katanas probably won't do anything as there are no monsters
+    present, however select one a few times until the first wave starts
+    and one or more monsters appear. To select a katana press the 'u', 'i',
+    'j', or 'k' keys (with default keybindings) to select the top-left, 
+    top-right, bottom-left, or bottom-right katana respectively.
+    
+        When you see a monster appear, press the ';' to view the nearest
+    monsters health and level. As this is the first wave, both numbers should
+    be relatively low. 
+
+        Now try to move over to the monster by selecting a katana with the 
+    Strike or Berserk movement types. If you do not have katanas with those 
+    movement types, select a different one and wait for the monster to come to 
+    you. Different monsters move at different speeds, so a other monsters may 
+    catch up.
+
+        Once the monster is in a tile next to you, select one of you katanas
+    to attack it. You will notice the purple bar between the map and katanas,
+    go down (or disappear completely if you kill the monster in one hit). This 
+    bar represents the health of the monster you are attacking. The red bar to 
+    the left of the purple one represents your health. If this one disappears
+    completely, you die and the game is over. You will regenerate health when
+    not in combat, but it is important to keep this one as full as possible.
+    If you are using a katana with a retreat movement type, you may have 
+    noticed the katana swishes to movement instead of attacking after two 
+    consecutive uses. This is to ensure that you can retreat in the middle of
+    a fight.
+
+        After you have killed a few monsters, you can try to start to be more 
+    strategic about your katana usage. Pressing the 'h' key will show the quick
+    help screen. This screen shows which monsters are resistant to which katanas
+    and which katanas work better on what terrain. To see the type of each 
+    katana check the symbols in the corners of the katana boxes. For the next 
+    monster you attack try to make sure you use a katana the monster is not 
+    resistant to, to do max damage. You can always check how much damage you do 
+    by using the ';' before and after an attack. Once you have killed that 
+    monster, try moving to terrain which will give one or more of your katanas 
+    a boost. Being strategic about your katana usage is not super useful in the 
+    first few waves, but becomes vital to stay alive later.
+
+        Once you have defeated the first wave, you can check player data by 
+    pressing the '@" key. This will show you the name of your character in 
+    blue, your score in purple, and your health and current turn in red. The
+    terrain of the tile you are standing on is also shown between the 
+    parenthesis. Both your score and turn values should be below or around 100,
+    but as you fight more waves, both of these will go up. Be warned, the higher
+    your turn value, the more each monster kill will increase your score, but 
+    each monster will also be of a higher level and thus more powerful. 
+
+        After you fight through the second wave, press shift + one of the katana
+    selection keys (u, i, j, k) to view in depth information about that katana.
+    The most important value to pay attention to here is the sharpness value.
+    As you attack more and more with a katana, its sharpness value will go down.
+    A katanas damage is proportional to its sharpness, so a katana which would
+    normally do 7 damage at 100 sharpness would only do 3-4 damage at 50 
+    sharpness. This screen also shows info on the katana type, katana usage 
+    statistics, and a cool ascii art depiction of the katana.
+
+        By now, a katana should have fallen from the sky and landed somewhere 
+    on the map. If not, keep playing until one does. The upper-left katana 
+    should always start as a fallen katana, so use it to move onto the nearest 
+    fallen katana. Once you step on it, a menu will pop up showing in depth 
+    information on the fallen katana. If the katana is better then one of the 
+    ones you have (or just more sharp) you can replace it by pressing the 
+    corresponding key. If you want to keep all of your current katanas, simply 
+    press 'b' to break the katana and extract some health from it. 
+
+        The last thing to do is to check the combo screen by pressing the 'c' 
+    key. Unless you stumbled upon a combo while playing, the only known one 
+    should be the discover combo. Activating this combo, (by pressing the keys 
+    shown in order) will "discover" a new combo which can be viewed by 
+    returning to the combo screen. Different games will have a few different 
+    combos, each of which do wildly different things, so make sure to 
+    experiment.
+
+        And thats all there is to know. Keep playing and eventually you will be 
+    able to get some very high scores. More in-depth info can be found by 
+    browsing the source code or reading the reference later in this manuel. 
+    Have fun :-)
+
+4. Compiling
+
+    Should compile on any platform with GCC compiler and ncurses (PDCurses on 
+Windows). For example: "gcc katana.c -g -Wall -Wextra -Wpedantic -okatana 
+-lpdcurses". The only thing which you might need to tweak are the keybindings 
+(lines 23-51 in Katana.h) and the ncurses include (line 20 in Katana.c). Tested 
+on Windows with PDCurses and Migwin.
+
+5. Reference
+
+        This reference includes a more in-depth explanation of aspects of the 
+    game. It is not necessary to play the game, however may be helpfully for 
+    hardcore players. Stuff between the `` represents code taken from the 
+    source. 
+
+    
+    Katana Gen:
+        Katana's are generated with a random katana, movement type and
+    attack damage `(dice(3, 4))` 
+        ^which is clamped to 1-12
+    attack damage mod `(fmax(dice(4,3) - 6, 0) + ((int) (currentGameData.turn/
+    TURNS_UNTIL_KATANA_POWER_INCREASE)))`
+        ^which is clamped to 0-12.
+    Additionally, a random ASCII representation of the katana is generated.
+
+    Enemy Gen:
+        Enemies are generated with a random type. They also have
+    level `(dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 
+    1, 4) + 1)`
+        ^which is clamped to 1-25 
+    speed `(abs(dice(3, 4) - 6))`
+        ^which is clamped to 1-6
+    max health `((myRand(currentEnemy->level) + 1) * 2)`
+        ^which is not clamped
+    damage `(currentEnemy->level / (myRand(3) + 1))`
+        ^which is not clamped
+
+    Katana damage:
+        `double damage = ((double) (katana->damage + myRand(katana->damageMod)) 
+        * resistancePercent * synergyPercent) 
+        * ((double) katana->sharpness / 100.0);`
+
+    Katana sharpness:
+        Katana sharpness decreases by `katana->sharpness -= 
+    (chanceForSharpnessDecrease - (CHANCE_FOR_SHARPNESS_DECREASE/2))` every 
+    attack. It is clamped at 25-100.
+
+    Katana Types:
+        Fire        (*)  - Works better on Magma
+        Ice         (+)  - Works better on Water
+        Wind        (=)  - Works better on Rock
+        Stone       (o)  - Works better on Rock
+        Lightning   (^)  - Works better on Magma
+        Poison      (~)  - Works better on Water
+
+        When a katana is used on terrain it works better with, its damage is 
+        multiplied by 1.3.
+
+    Movement Types:
+        Strike  - Move to strongest enemy                        
+        Berserk - Move to the closest enemy                      
+        Retreat - Move away from the most enemies                
+        Return  - Attempt to move to terrain matching katana type
+        Defend  - Don't move                                     
+        Fallen  - Attempt to move to closest fallen katana       
+        Random  - Move in random direction  
+
+    Enemy Types:
+        Basic    (B) - No resistances
+        Energy   (E) - Resistant to Fire and Lightning
+        Strong   (S) - Resistant to Wind and Stone
+        Fluid    (F) - Resistant to Ice and Poison
+
+        When an enemy is attacked by a katana it is resistant to, the damage it 
+    would take is multiplied by 0.7.
+
+    Terrain Types:
+        Grass   (.)
+        Water   (~)
+        Rock    (*)
+        Magma   (^)
+
+    Combos:
+        Discover   -  Discover a combo
+        Heal       -  Gives a small health boost"
+        Terraform  -  Randomly changes the terrain under your feet
+        Freeze     -  Freezes all enemies for six turns
+        Swap       -  Randomly swaps the location of two katanas
+        Boost      -  Double the damage of your next attack
+        Teleport   -  Teleport to a random location
+        Force      -  Force your next attack to ignore enemy resistance
+        Scare      -  Scare enemies into taking a step back
+
+        Every game includes the discover combo plus 2-4 addition combos.
+
+    Fallen katanas:
+        Fallen katana have a 1/120 of "falling" every turn. Each one modifies a 
+    randomly sized circle of terrain under them. A max of 15 fallen katanas can 
+    exist in a game at a time.
+
+    Waves:
+        Enemies spawn in waves. Every enemy must be killed before the next wave 
+    starts. Each wave has four features which dictate what, where, and when 
+    enemies will spawn.
+
+        Enemies can spawn
+            All at once
+            One at a time
+            Two at a time
+            A random amount at a time
+
+        There can be
+            One type
+            Two types
+            Three types
+            All types
+
+        They will spawn with a
+            2 turn delay
+            5 turn delay 
+            7 turn delay
+            10 turn delay
+    
+        They can spawn from
+            One side    
+            Two sides  
+            Three sides
+            All sides  
+
+
+6. Notes
+
+    *The source code inhabits only two files. I know. This is stupid and a bad 
+    idea. I modeled the source format off of Chimaera (the 2002 adventure game) 
+    because it looked cool. Sorry.
+
+    *This game is really unbalanced and super luck based. Yes. I only know so 
+    many people who are willing to play-test a game like this. You are welcome 
+    to change the macros on lines 85 and onward in Katana.h to change the game 
+    balance. 

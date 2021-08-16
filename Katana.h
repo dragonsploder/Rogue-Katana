@@ -5,195 +5,150 @@
 /*  Date    :   14th January 2021                                                                          */
 /*  Function:   Declarations and function prototypes for Katana                                            */
 /*                                                                                                         */
+/*---- Include Files --------------------------------------------------------------------------------------*/
+#include <stdlib.h>          /* General functions                                                          */
+#include <time.h>            /* Functions for date and time                                                */
 /*---------------------------------------------------------------------------------------------------------*/
 
 
 
-#include <stdlib.h>
-#include <time.h>
-
-
 /* Screen laylout def */
 #define SCREEN_HEIGHT 24
-#define SCREEN_WIDTH 80
+#define SCREEN_WIDTH  80
 
 
-#define MAP_HEIGHT (SCREEN_HEIGHT/3 - 1)
-#define MAP_WIDTH (SCREEN_WIDTH - 2)
+#define MAP_HEIGHT    (SCREEN_HEIGHT/3 - 1)
+#define MAP_WIDTH     (SCREEN_WIDTH - 2)
 
 /* Controls */
-#define TOP_LEFT_KATANA      'u'
-#define TOP_RIGHT_KATANA     'i'
-#define BOTTOM_LEFT_KATANA   'j'
-#define BOTTOM_RIGHT_KATANA  'k'
+#define TOP_LEFT_KATANA                'u'
+#define TOP_RIGHT_KATANA               'i'
+#define BOTTOM_LEFT_KATANA             'j'
+#define BOTTOM_RIGHT_KATANA            'k'
 
 #define TOP_LEFT_KATANA_SECONDARY      'U'
 #define TOP_RIGHT_KATANA_SECONDARY     'I'
 #define BOTTOM_LEFT_KATANA_SECONDARY   'J'
 #define BOTTOM_RIGHT_KATANA_SECONDARY  'K'
 
-#define BREAK_KATANA_KEY     'b'
-#define HELP_KEY             'h'
-#define COMBO_REFERNCE_KEY   'c'
-#define ENEMY_CHECK_KEY      ';'
-#define QUIT_KEY             'Q'
-#define PLAYER_DATA_KEY      '@'
+#define BREAK_KATANA_KEY               'b'
+#define HELP_KEY                       'h'
+#define COMBO_REFERNCE_KEY             'c'
+#define ENEMY_CHECK_KEY                ';'
+#define QUIT_KEY                       'Q'
+#define PLAYER_DATA_KEY                '@'
 
-#define ACCEPT_KEY       KEY_ENTER
-#define UP_ARROW_KEY     KEY_UP
-#define DOWN_ARROW_KEY   KEY_DOWN
-#define LEFT_ARROW_KEY   KEY_LEFT
-#define RIGHT_ARROW_KEY  KEY_RIGHT
+#define ACCEPT_KEY                     KEY_ENTER
+#define UP_ARROW_KEY                   KEY_UP
+#define DOWN_ARROW_KEY                 KEY_DOWN
+#define LEFT_ARROW_KEY                 KEY_LEFT
+#define RIGHT_ARROW_KEY                KEY_RIGHT
 
-// Uncomment if using VS code cmd terminal
-/*
-#if defined(_WIN32)
-    #undef  KEY_DOWN
-    #define KEY_DOWN      456
-    #undef  KEY_UP
-    #define KEY_UP        450
-    #undef  KEY_LEFT
-    #define KEY_LEFT      452
-    #undef  KEY_RIGHT
-    #define KEY_RIGHT     454
-#endif
-*/
-
-#undef  KEY_BACKSPACE
-#define KEY_BACKSPACE 8
-#undef  KEY_ENTER
-#define KEY_ENTER     10
-#define KEY_ESC       27
+#undef  KEY_BACKSPACE                  
+#define KEY_BACKSPACE                  8
+#undef  KEY_ENTER                 
+#define KEY_ENTER                      10
+#define KEY_ESC                        27
 
 
 /* Struct Info */
-#define NUMBER_OF_KATANA_TYPES  6
-#define KATANA_FIRE       0
-#define KATANA_ICE        1
-#define KATANA_WIND       2
-#define KATANA_STONE      3
-#define KATANA_LIGHTNING  4
-#define KATANA_POSION     5
-
-#define NUMBER_OF_MOVEMENT_TYPES 7
-#define MOVEMENT_STRIKE   0 /* Move to strongest enemy                        */
-#define MOVEMENT_BERSERK  1 /* Move to the closest enemy                      */
-#define MOVEMENT_RETREAT  2 /* Move away from the most enemies                */
-#define MOVEMENT_RETURN   3 /* Attempt to move to terrain maching katana type */
-#define MOVEMENT_DEFEND   4 /* Don't move                                     */
-#define MOVEMENT_FALLEN   5 /* Attempt to move to closest fallen katana       */
-#define MOVEMENT_RAND     6 /* Move in random direction                       */
-
-#define NUMBER_OF_TERRAIN_TYPES 4
-#define TERRAIN_GRASS  0 /* None */
-#define TERRAIN_WATER  1 /* Ice & Lightning synergies */
-#define TERRAIN_ROCK   2 /* Stone & Wind synergies    */
-#define TERRAIN_MAGMA  3 /* Fire & Posion synergies   */
-
-#define NUMBER_OF_ENEMY_TYPES 4
-#define ENEMY_BASIC   0 /* Not resistant              */
-#define ENEMY_ENERGY  1 /* Fire & Lightning resistant */
-#define ENEMY_STRONG  2 /* Stone & Wind resistant     */
-#define ENEMY_FLUID   3 /* Ice & Posion resistant     */
+#define NUMBER_OF_KATANA_TYPES    6
+#define KATANA_FIRE               0
+#define KATANA_ICE                1
+#define KATANA_WIND               2
+#define KATANA_STONE              3
+#define KATANA_LIGHTNING          4
+#define KATANA_POISON             5
+ 
+#define NUMBER_OF_MOVEMENT_TYPES  7
+#define MOVEMENT_STRIKE           0 /* Move to strongest enemy                         */
+#define MOVEMENT_BERSERK          1 /* Move to the closest enemy                       */
+#define MOVEMENT_RETREAT          2 /* Move away from the most enemies                 */
+#define MOVEMENT_RETURN           3 /* Attempt to move to terrain matching katana type */
+#define MOVEMENT_DEFEND           4 /* Don't move                                      */
+#define MOVEMENT_FALLEN           5 /* Attempt to move to closest fallen katana        */
+#define MOVEMENT_RAND             6 /* Move in random direction                        */
+ 
+#define NUMBER_OF_TERRAIN_TYPES   4
+#define TERRAIN_GRASS             0 /* None */
+#define TERRAIN_WATER             1 /* Ice & Lightning synergies */
+#define TERRAIN_ROCK              2 /* Stone & Wind synergies    */
+#define TERRAIN_MAGMA             3 /* Fire & Poison synergies   */
+ 
+#define NUMBER_OF_ENEMY_TYPES     4
+#define ENEMY_BASIC               0 /* Not resistant              */
+#define ENEMY_ENERGY              1 /* Fire & Lightning resistant */
+#define ENEMY_STRONG              2 /* Stone & Wind resistant     */
+#define ENEMY_FLUID               3 /* Ice & Poison resistant     */
 
 
 /* Game Balance */
-#define PLAYER_START_HEALTH               100
+#define PLAYER_START_HEALTH                100
 
-#define ENEMY_RESISTANCE_PERCENT          0.7
-#define TERRAIN_SYNERGY_PERCENT           1.3
+#define ENEMY_RESISTANCE_PERCENT           0.7
+#define TERRAIN_SYNERGY_PERCENT            1.3
 
-#define MAX_NUMBER_OF_ENEMIES             25
-#define ENEMY_LEVEL_CAP                   20
+#define MAX_NUMBER_OF_ENEMIES              25
+#define ENEMY_LEVEL_CAP                    20
 
-#define MAX_NUMBER_OF_COMBOS              10
+#define MAX_NUMBER_OF_COMBOS               10
 
-#define MIN_KATANA_SHARPNESS              25
-#define CHANCE_FOR_SHARPNESS_DECREASE     10
+#define MIN_KATANA_SHARPNESS               25
+#define CHANCE_FOR_SHARPNESS_DECREASE      10
 
-#define MAX_NUMBER_OF_FALLEN_KATANAS      10
-#define CHANCE_FOR_FALLEN_KATANA          100
+#define MAX_NUMBER_OF_FALLEN_KATANAS       15
+#define CHANCE_FOR_FALLEN_KATANA           100
 
-#define CHANCE_FOR_HEALTH_INCREASE        3
-#define MAX_HEALTH_INCREASE               5
+#define CHANCE_FOR_HEALTH_INCREASE         3
+#define MAX_HEALTH_INCREASE                5
 
-#define TURNS_UNTIL_DIFFICULTY_INCREASE   70
-#define TURNS_UNTIL_KATANA_POWER_INCREAS  120
+#define TURNS_UNTIL_DIFFICULTY_INCREASE    70
+#define TURNS_UNTIL_KATANA_POWER_INCREASE  120
 
-#define ENEMY_SPAWN_NUMBER_BASE           (myRand(3) + 3)
-#define ENEMY_GEN_PER_DIFFICULTY_INCREASE 2
+#define ENEMY_SPAWN_NUMBER_BASE            (myRand(3) + 3)
+#define ENEMY_GEN_PER_DIFFICULTY_INCREASE  2
 
-#define ENEMY_SPEED_GEN                   (abs(dice(3, 4) - 6))
-#define ENEMY_LEVEL_GEN                   (dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 1, 4) + 1)
-#define ENEMY_MAX_HEALTH_GEN              ((myRand(currentEnemy->level) + 1) * 2)
-#define ENEMY_DAMAGE_GEN                  (currentEnemy->level / (myRand(3) + 1))
+#define ENEMY_SPEED_GEN                    (abs(dice(3, 4) - 6))
+#define ENEMY_LEVEL_GEN                    (dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 1, 4) + 1)
+#define ENEMY_MAX_HEALTH_GEN               ((myRand(currentEnemy->level) + 1) * 2)
+#define ENEMY_DAMAGE_GEN                   (currentEnemy->level / (myRand(3) + 1))
            
-#define KATANA_MAX_DAMAGE 12
-//#define KATANA_DAMAGE_GEN                 (dice(1 + ((int) (currentGameData.turn/TURNS_UNTIL_KATANA_POWER_INCREAS)), 4) + 1)
-#define KATANA_DAMAGE_MOD_GEN             (fmax(dice(4,3) - 6, 0) + ((int) (currentGameData.turn/TURNS_UNTIL_KATANA_POWER_INCREAS)))
-
+#define KATANA_MAX_DAMAGE                  12
+#define KATANA_DAMAGE_GEN                  (dice(3, 4))
+#define KATANA_DAMAGE_MOD_GEN              (fmax(dice(4,3) - 6, 0) + ((int) (currentGameData.turn/TURNS_UNTIL_KATANA_POWER_INCREASE)))
+#define MAX_KATANA_DAMAGE_MOD              12  
 
 
 /* Misc */
-#define HISTORY_LENGTH 50
-#define ERROR(x) printError(#x,__FILE__, __LINE__)
-
+#define HISTORY_LENGTH        50
+#define ERROR(x)              printError(#x,__FILE__, __LINE__)
+#define CHECK_BIT(var, mask)  ((mask & var) == mask)
 
 
 /* Bit Masks */
-#define CHECK_BIT(var, mask) ((mask & var) == mask)
-
-/*
-#define COMBO_FLAG_DOUBLE_ATTACK    0b0000000000000001
-#define COMBO_FLAG_FORCE_ATTACK     0b0000000000000010
-#define COMBO_FLAG_SCARE_ENEMIES    0b0000000000000100
-
-
-#define WAVE_FLAG_ALL_AT_ONCE       0b0000000000000001
-#define WAVE_FLAG_ONE_AT_A_TIME     0b0000000000000010
-#define WAVE_FLAG_TWO_AT_A_TIME     0b0000000000000100
-#define WAVE_FLAG_RAND_AT_A_TIME    0b0000000000001000
-
-#define WAVE_FLAG_ONLY_ONE_TYPE     0b0000000000010000
-#define WAVE_FLAG_ONLY_TWO_TYPES    0b0000000000100000
-#define WAVE_FLAG_ONLY_THREE_TYPES  0b0000000001000000
-#define WAVE_FLAG_ALL_TYPES         0b0000000010000000
-
-#define WAVE_FLAG_2_TURN_DELAY      0b0000000100000000
-#define WAVE_FLAG_5_TURN_DELAY      0b0000001000000000
-#define WAVE_FLAG_7_TURN_DELAY      0b0000010000000000
-#define WAVE_FLAG_10_TURN_DELAY     0b0000100000000000
+#define COMBO_FLAG_DOUBLE_ATTACK     1
+#define COMBO_FLAG_FORCE_ATTACK      2
+#define COMBO_FLAG_SCARE_ENEMIES     4
  
-#define WAVE_FLAG_ONE_SIDE_SPAWN    0b0001000000000000
-#define WAVE_FLAG_TWO_SIDES_SPAWN   0b0010000000000000
-#define WAVE_FLAG_THREE_SIDES_SPAWN 0b0100000000000000
-#define WAVE_FLAG_FOUR_SIDES_SPAWN  0b1000000000000000
-*/
-
-#define COMBO_FLAG_DOUBLE_ATTACK    1
-#define COMBO_FLAG_FORCE_ATTACK     2
-#define COMBO_FLAG_SCARE_ENEMIES    4
-
-
-#define WAVE_FLAG_ALL_AT_ONCE       1
-#define WAVE_FLAG_ONE_AT_A_TIME     2
-#define WAVE_FLAG_TWO_AT_A_TIME     4
-#define WAVE_FLAG_RAND_AT_A_TIME    8
-
-#define WAVE_FLAG_ONLY_ONE_TYPE     16
-#define WAVE_FLAG_ONLY_TWO_TYPES    32
-#define WAVE_FLAG_ONLY_THREE_TYPES  64
-#define WAVE_FLAG_ALL_TYPES         128
-
-#define WAVE_FLAG_2_TURN_DELAY      256
-#define WAVE_FLAG_5_TURN_DELAY      512
-#define WAVE_FLAG_7_TURN_DELAY      1024
-#define WAVE_FLAG_10_TURN_DELAY     2048
+#define WAVE_FLAG_ALL_AT_ONCE        1
+#define WAVE_FLAG_ONE_AT_A_TIME      2
+#define WAVE_FLAG_TWO_AT_A_TIME      4
+#define WAVE_FLAG_RAND_AT_A_TIME     8
  
-#define WAVE_FLAG_ONE_SIDE_SPAWN    4096
-#define WAVE_FLAG_TWO_SIDES_SPAWN   8192
-#define WAVE_FLAG_THREE_SIDES_SPAWN 16384
-#define WAVE_FLAG_FOUR_SIDES_SPAWN  32768
+#define WAVE_FLAG_ONLY_ONE_TYPE      16
+#define WAVE_FLAG_ONLY_TWO_TYPES     32
+#define WAVE_FLAG_ONLY_THREE_TYPES   64
+#define WAVE_FLAG_ALL_TYPES          128
+ 
+#define WAVE_FLAG_2_TURN_DELAY       256
+#define WAVE_FLAG_5_TURN_DELAY       512
+#define WAVE_FLAG_7_TURN_DELAY       1024
+#define WAVE_FLAG_10_TURN_DELAY      2048
+  
+#define WAVE_FLAG_ONE_SIDE_SPAWN     4096
+#define WAVE_FLAG_TWO_SIDES_SPAWN    8192
+#define WAVE_FLAG_THREE_SIDES_SPAWN  16384
+#define WAVE_FLAG_FOUR_SIDES_SPAWN   32768
 
 /* Structs */
 struct Vec2 {
@@ -202,137 +157,103 @@ struct Vec2 {
 };
 
 struct Katana {
-    char name[20];
-    int type;
-
-    /* 1 - 12 */
-    int damage;
-    /* 0 - 6 */
-    int damageMod;
-
-    int movementType;
-
-    /* 100 - 0 */
-    int sharpness;
-
-
-    int numberOfMoves;
-    int numberOfStrikes;
-    int numberOfKills;
-
-    char katanaImage[3][MAP_WIDTH];
-
+    char name[20];                   /* Generated katana name (type + damage) */
+    int type;                        /* Fire, Ice, etc                        */
+    int damage;                      /* 1 - 12                                */
+    int damageMod;                   /* 0 - 12                                */
+    int movementType;                /* Strike, Besserk, etc                  */
+    int sharpness;                   /* 100 - 25                              */
+    int numberOfMoves;               /* Number movement uses with this katana */
+    int numberOfStrikes;             /* Number of attacks with this katana    */
+    int numberOfKills;               /* Number of kills with this katana      */
+    char katanaImage[3][MAP_WIDTH];  /* Generated ASCII art of this katana    */
 };
 
 struct Player {
-    char name[20];
-    int health;
-
-    int turnOfLastCombo;
-
-    struct Vec2 location;
-
-    struct Katana katanas[4];
-
-    int enemiesKilled;
-    int attacks;
-    int moves;
-    int katanasPickedUp;
-    int katanasBroken;
-
-    char DNA[MAP_HEIGHT][MAP_WIDTH + 1];
+    char name[20];                        /* Player name                        */
+    int health;                           /* Current health                     */
+    int turnOfLastCombo;                  /* Last turn player used combo        */
+    struct Vec2 location;                 /* Current player location            */
+    struct Katana katanas[4];             /* Currently held katanas             */
+    int enemiesKilled;                    /* Number of enemies killed by player */
+    int attacks;                          /* Number of katana attacks           */
+    int moves;                            /* Number of player moves (movement)  */
+    int katanasPickedUp;                  /* Number of fallen katanas picked up */
+    int katanasBroken;                    /* Number of fallen katanas broken    */
+    char DNA[MAP_HEIGHT][MAP_WIDTH + 1];  /* Random ASCII "DNA" mess            */
 };
 
 struct Enemy {
-    int type;
-    int maxHeath;
-    int health;
-    int damage;
-    int speed; /* 1:normal - 6:slow */
-
-    int level;
-
-
-
-    int lastMovementTurn;
-    struct Vec2 location;
-
-
+    int type;              /* Basic, Energy, etc               */
+    int level;             /* Level (used to gen other values) */
+    int maxHeath;          /* Starting health                  */
+    int health;            /* Current health                   */
+    int damage;            /* Damage to player each attack     */
+    int speed;             /* Speed (1:fast-6:slow)            */
+    int lastMovementTurn;  /* Last turn enemy moved            */
+    struct Vec2 location;  /* Current location                 */
 };
 
+/* Map tile */
 struct Tile {
-    int type;
-    bool hasFallenKatana;
-    struct Katana fallenKatana;
+    int type;                    /* Grass, Water, etc                     */
+    bool hasFallenKatana;        /* Is there a fallen katana on this tile */
+    struct Katana fallenKatana;  /* The fallen katana on this tile        */
 };
 
+/* Used to generate combos */
 struct ProtoCombo {
-    int action;
-    int length;
-    char title[12];
-    char description[50];
+    int action;            /* Action index (0-8)                  */
+    int length;            /* Length of combo (turns to complete) */
+    char title[12];        /* Title of combo                      */
+    char description[50];  /* Description of combo                */
 };
 
+/* Actual combo struct used in-game */
 struct Combo {
-    int action;
-
-    int length;
-    int combo[10];
-
-    int infoIndex;
-
-    bool known;
+    int action;    /* Action index (0-8)                           */
+    int length;    /* Length of combo (turns to complete)          */
+    int combo[10]; /* Inputs to activate combo (based on length)   */
+    int infoIndex; /* Index to ProtoCombo with title/description   */
+    bool known;    /* Has this combo been discovered by the player */
 };
 
+/* Outlines enemy waves */
 struct Wave {
-    int difficulty;
-
-    unsigned short flags;
-
-    int enemiesToSpawn[4];
+    int difficulty;        /* Difficulty of this wave (higher=more enemies)                       */
+    unsigned short flags;  /* Flags for the wave (FLAG_ALL_AT_ONCE, WAVE_FLAG_ONLY_ONE_TYPE, etc) */
+    int enemiesToSpawn[4]; /* Number of enemies to spawn 0:Basic, 1:Strong, etc                   */
 };
 
+/* Holds all data which changes during gameplay          */
+/* This is the struct which gets dumped to the save file */
 struct GameData {
-    struct Player player;
-    int score;
-
-    int currentNumberOfEnemies;
-    struct Enemy enemies[MAX_NUMBER_OF_ENEMIES];
-
-
-    struct Tile map[MAP_HEIGHT][MAP_WIDTH];
-
-    int currentNumberOfFallenKatanas;
-
-    int turn;
-
-    /* [0]:type, [1]:location, [2]:movement */
-    int previousMoves[HISTORY_LENGTH][3];
-
-    int currentEnemyToAttack;
-
-    int numberOfCombos;
-    struct Combo combos[MAX_NUMBER_OF_COMBOS];
-
-    int currentNumberOfDiscoveredCombos;
-    int discoveredCombos[MAX_NUMBER_OF_COMBOS];
-
-    int turnsToFreeze;
-
-    unsigned short comboFlags;
-
-    struct Wave currentWave;
-    int currentNumberOfWaves;
-    int turnOfLastEnemySpawn;
-
-    int saveCheck;
+    struct Player player;                         /* All player data                                                                             */
+    int score;                                    /* Current player score                                                                        */
+    int currentNumberOfEnemies;                   /* Current number of enemies in-game                                                           */
+    struct Enemy enemies[MAX_NUMBER_OF_ENEMIES];  /* Data for enemies in-game                                                                    */
+    struct Tile map[MAP_HEIGHT][MAP_WIDTH];       /* Data for current map                                                                        */
+    int currentNumberOfFallenKatanas;             /* Current number of Fallen katanas on map                                                     */
+    int turn;                                     /* Current game turn                                                                           */
+    int previousMoves[HISTORY_LENGTH][3];         /* History of previous moves ([0]:type, [1]:location, [2]:movement)                            */
+    int currentEnemyToAttack;                     /* Index to enemy play will/is attack(ing)                                                     */
+    int numberOfCombos;                           /* Number of combos in this game                                                               */
+    struct Combo combos[MAX_NUMBER_OF_COMBOS];    /* Data for the combos in-game                                                                 */
+    int currentNumberOfDiscoveredCombos;          /* Current number of combos discovered by the player                                           */
+    int discoveredCombos[MAX_NUMBER_OF_COMBOS];   /* Indexes to discovered combos                                                                */
+    int turnsToFreeze;                            /* Turns for enemies to freeze (Freeze combo)                                                  */
+    unsigned short comboFlags;                    /* Flags flipped after certain combos (COMBO_FLAG_DOUBLE_ATTACK, COMBO_FLAG_FORCE_ATTACK, etc) */
+    struct Wave currentWave;                      /* Data for the current wave                                                                   */
+    int currentNumberOfWaves;                     /* Number of the wave the game is on                                                           */
+    int turnOfLastEnemySpawn;                     /* Turns since an enemy spawn                                                                  */
+    int saveCheck;                                /* Number used to check if file is save file                                                   */
 };
 
 /* Global Definitions */
 struct GameData currentGameData;
 
-#define NUMBER_OF_TITLE_CARD_LINES 8
-const char titleCard[NUMBER_OF_TITLE_CARD_LINES][100] = {
+#define NUMBER_OF_TITLE_CARD_LINES 9
+const char titleCard[NUMBER_OF_TITLE_CARD_LINES][MAP_WIDTH] = {
     "                                              ",
     "     _   __  ___ _____ ___   _   _   ___      ",
     "    | | / / / _ \\_   _/ _ \\ | \\ | | / _ \\     ",
@@ -340,6 +261,7 @@ const char titleCard[NUMBER_OF_TITLE_CARD_LINES][100] = {
     "    |    \\ |  _  || ||  _  ||     ||  _  |    ",
     "    | |\\  \\| | | || || | | || |\\  || | | |    ",
     "    \\_| \\_/\\_| |_/\\_/\\_| |_/\\_| \\_/\\_| |_/    ",
+    "              by Joshua Bourgeot              ",
     "                                              "
 };
 
@@ -359,14 +281,14 @@ const char quickHelpText[NUMBER_OF_QUICK_HELP_LINES][100] = {
     "       Wind        (=)         Rock         (*)        Strong      (S)        ",
     "       Stone       (o)         Magma        (^)        Fluid       (F)        ",
     "       Lightning   (^)                                                        ",
-    "       Posion      (~)                                                        ",
+    "       Poison      (~)                                                        ",
     "                                                                              ",
     "    Fire       works better on  Magma  but worse against  Energy  enemies     ",
     "    Ice        works better on  Water  but worse against  Fluid   enemies     ",
     "    Wind       works better on  Rock   but worse against  Strong  enemies     ",
     "    Stone      works better on  Rock   but worse against  Strong  enemies     ",
     "    Lightning  works better on  Magma  but worse against  Energy  enemies     ",
-    "    Posion     works better on  Water  but worse against  Fluid   enemies     ",
+    "    Poison     works better on  Water  but worse against  Fluid   enemies     ",
     "                                                                              ",
     "                       Lowercase enemies are weaker                           ",
     "                      (!) represents a fallen katana                          "
@@ -412,7 +334,7 @@ const char katanaCornerIcon[NUMBER_OF_KATANA_TYPES][2] = {
     "=", /* Wind      */
     "o", /* Stone     */
     "^", /* Lightning */
-    "~"  /* Posion    */
+    "~"  /* Poison    */
 };
 
 const int katanaColor[NUMBER_OF_KATANA_TYPES] = {
@@ -421,7 +343,7 @@ const int katanaColor[NUMBER_OF_KATANA_TYPES] = {
     COLOR_MAGENTA, /* Wind      */
     COLOR_YELLOW,  /* Stone     */
     COLOR_CYAN,    /* Lightning */
-    COLOR_GREEN    /* Posion    */
+    COLOR_GREEN    /* Poison    */
 };
 
 const int katanaToTerrain[NUMBER_OF_KATANA_TYPES] = {
@@ -430,7 +352,7 @@ const int katanaToTerrain[NUMBER_OF_KATANA_TYPES] = {
     2, /* Wind -> Rock       */
     2, /* Stone -> Rock      */
     3, /* Lightning -> Magma */
-    1  /* Posion -> Water    */
+    1  /* Poison -> Water    */
 };
 
 const int katanaToEnemyResistance[NUMBER_OF_KATANA_TYPES] = {
@@ -439,7 +361,7 @@ const int katanaToEnemyResistance[NUMBER_OF_KATANA_TYPES] = {
     2, /* Wind -> Strong is resistant      */
     2, /* Stone -> Strong is resistant     */
     1, /* Lightning -> Energy is resistant */
-    3  /* Posion -> Fluid is resistant     */
+    3  /* Poison -> Fluid is resistant     */
 };
 
 const char katanaMovementTypeNames[NUMBER_OF_MOVEMENT_TYPES][10] = {
@@ -458,7 +380,7 @@ const char katanaType[NUMBER_OF_KATANA_TYPES][10] = {
     "Wind",
     "Stone",
     "Lightning",
-    "Posion"
+    "Poison"
 };
 
 const char katanaNameType[NUMBER_OF_KATANA_TYPES][10] = {
@@ -467,7 +389,7 @@ const char katanaNameType[NUMBER_OF_KATANA_TYPES][10] = {
     "Kaze",    /* Wind      */
     "Iwa",     /* Stone     */
     "Inazuma", /* Lightning */
-    "Doku"     /* Posion    */
+    "Doku"     /* Poison    */
 };
 
 const char katanaNameDamage[KATANA_MAX_DAMAGE][10] = {
@@ -528,22 +450,14 @@ const char katanaBladeTipTypes[NUMBER_OF_KATANA_BLADE_TIP_TYPES][2] = {
 struct ProtoCombo protoCombos[NUMBER_OF_PROTO_COMBOS] = {
     {0, 5, "Discover", "Discover a combo"},
     {1, 3, "Heal", "Gives a small health boost"},
-    {2, 2, "Terriform", "Randomly changes the terrain under your feet"},
-    {3, 4, "Freeze", "Freezes all enemies for 6 turns"},
-    {4, 3, "Swap", "Randomly swaps the location of 2 katanas"},
+    {2, 2, "Terraform", "Randomly changes the terrain under your feet"},
+    {3, 4, "Freeze", "Freezes all enemies for six turns"},
+    {4, 3, "Swap", "Randomly swaps the location of two katanas"},
     {5, 3, "Boost", "Double the damage of your next attack"},
     {6, 5, "Teleport", "Teleport to a random location"},
     {7, 3, "Force", "Force your next attack to ignore enemy resistance"},
     {8, 2, "Scare", "Scare enemies into taking a step back"},
 };
-
-/*
-const char comboLocationToText[4][4] = {
-    "TL-",
-    "TR-",
-    "BL-",
-    "BR-"
-};*/
 
 const char comboLocationToText[4] = {
     TOP_LEFT_KATANA,
@@ -554,7 +468,7 @@ const char comboLocationToText[4] = {
 
 /*==== Forward Function Decleration =======================================================================*/
 int main();                                                          /* Main function                      */
-void mainMenu();                                                     /* Handels main menu screen           */
+void mainMenu();                                                     /* Handles main menu screen           */
 void gameLoop();                                                     /* Game loop which runs every turn    */
 /*---- Find Functions -------------------------------------------------------------------------------------*/
 double findDistance(struct Vec2 start, struct Vec2 end, bool pythagoras); /* Distance between two points   */
