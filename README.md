@@ -9,7 +9,7 @@ Katana should compile on any system with [ncurses](https://invisible-island.net/
 ```
 $git clone https://github.com/dragonsploder/Rogue-Katana.git
 $cd Rogue-Katana
-$gcc Katana.c -g -Wall -Wextra -Wpedantic -okatana -lncurses
+$gcc Katana.c -lm -Wall -Wextra -Wpedantic -okatana -lncurses
 $./katana
 ```
 

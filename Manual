@@ -136,7 +136,7 @@ things like double the damage of your next attack or give a small health boost.
 4. Compiling
 
     Should compile on any platform with GCC compiler and ncurses (PDCurses on 
-Windows). For example: "gcc katana.c -g -Wall -Wextra -Wpedantic -okatana 
+Windows). For example: "gcc katana.c -lm -Wall -Wextra -Wpedantic -okatana 
 -lpdcurses". The only thing which you might need to tweak are the keybindings 
 (lines 23-51 in Katana.h) and the ncurses include (line 20 in Katana.c). Tested 
 on Windows with PDCurses and Migwin.
