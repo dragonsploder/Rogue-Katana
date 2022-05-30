@@ -77,7 +77,7 @@ things like double the damage of your next attack or give a small health boost.
     completely, you die and the game is over. You will regenerate health when
     not in combat, but it is important to keep this one as full as possible.
     If you are using a katana with a retreat movement type, you may have 
-    noticed the katana swishes to movement instead of attacking after two 
+    noticed the katana swiches to movement instead of attacking after two 
     consecutive uses. This is to ensure that you can retreat in the middle of
     a fight.
 
@@ -150,7 +150,7 @@ on Windows with PDCurses and Migwin.
 
     
     Katana Gen:
-        Katana's are generated with a random katana, movement type and
+        Katana's are generated with a random katana type, movement type, and
     attack damage `(dice(3, 4))` 
         ^which is clamped to 1-12
     attack damage mod `(fmax(dice(4,3) - 6, 0) + ((int) (currentGameData.turn/
@@ -262,6 +262,38 @@ on Windows with PDCurses and Migwin.
             Three sides
             All sides  
 
+    Controls:
+
+        Action                          Code Macro                      Key
+        
+        Select the top left katana      (TOP_LEFT_KATANA)               : 'u'
+        Select the top right katana     (TOP_RIGHT_KATANA)              : 'i'
+        Select the bottom left katana   (BOTTOM_LEFT_KATANA)            : 'j'
+        Select the bottom right katana  (BOTTOM_RIGHT_KATANA)           : 'k'
+        
+        Info on the top left katana     (TOP_LEFT_KATANA_SECONDARY)     : 'U'
+        Info on the top right katana    (TOP_RIGHT_KATANA_SECONDARY)    : 'I'
+        Info on the bottom left katana  (BOTTOM_LEFT_KATANA_SECONDARY)  : 'J'
+        Info on the bottom right katana (BOTTOM_RIGHT_KATANA_SECONDARY) : 'K'
+
+        Break a fallen katana           (BREAK_KATANA_KEY)              : 'b'
+        Display quick help              (HELP_KEY)                      : 'h'
+        Display combo reference         (COMBO_REFERENCE_KEY)           : 'c'
+        Display info on nearest enemy   (ENEMY_CHECK_KEY)               : ';'
+        Quit game                       (QUIT_KEY)                      : 'Q'
+        Display player info             (PLAYER_DATA_KEY)               : '@'
+        Escape (also used in menus)     (KEY_ESC)             :     "Esc key"
+
+        Menu specific:
+        Accept / enter                  (ACCEPT_KEY)          :       "Enter" 
+        Backspace (delete a character)  (KEY_BACKSPACE)       :   "Backspace"
+        Move up                         (UP_ARROW_KEY)        :    "Up Arrow"
+        Move down                       (DOWN_ARROW_KEY)      :  "Down Arrow"
+        Move left                       (LEFT_ARROW_KEY)      :  "Left Arrow"
+        Move right                      (RIGHT_ARROW_KEY)     : "Right Arrow"
+
+            All keys can be rebound at compile time by editing the macros 
+        starting on line 25 in katana.h.
 
 6. Notes
 

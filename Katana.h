@@ -34,7 +34,7 @@
 
 #define BREAK_KATANA_KEY               'b'
 #define HELP_KEY                       'h'
-#define COMBO_REFERENCE_KEY             'c'
+#define COMBO_REFERENCE_KEY            'c'
 #define ENEMY_CHECK_KEY                ';'
 #define QUIT_KEY                       'Q'
 #define PLAYER_DATA_KEY                '@'
