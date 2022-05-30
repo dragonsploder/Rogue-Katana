@@ -1475,6 +1475,7 @@ void sliceInsertString(char* expression, char* insert, int location, int replace
     expression[location] = '\0';
     strcat(expression, insert);
     strcat(expression, &oldExpression[location + replacementLen]);
+    free(oldExpression);
 }
 
 void formatBlock(char* oldString, char* newString, int lineLength) {
