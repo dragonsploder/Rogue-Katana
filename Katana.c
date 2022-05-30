@@ -18,7 +18,7 @@
 #else                            /*                                                                        */
     #include <ncurses.h>         /* Libraray for terminal manipulation (Unix based systems)                */
 #endif                           /*                                                                        */
-#include "Katana.h"              /* Katana variables, arrays and structures                                */
+#include "Katana.h"              /* Katana variables, arrays, and structures                               */
 /*---- Main Function --------------------------------------------------------------------------------------*/
 
 
@@ -109,7 +109,7 @@ void mainMenu(){
             char buffer[20];
             clearScreen();
             mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 27, "Please enter your name. Leave blank for a random name");
-            if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+            if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, 20, &buffer[0]) == -1) {
                 mainMenu();
                 return;
             }
@@ -128,7 +128,7 @@ void mainMenu(){
             clearScreen();
             do {
                 mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter valid filepath");
-                if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+                if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, 100, &buffer[0]) == -1) {
                     mainMenu();
                     return;
                 }
@@ -341,7 +341,7 @@ void gameLoop() {
             printBoarder(false);
             mvprintw(MAP_HEIGHT/2, (MAP_WIDTH/2) - 10, "Enter save filename");
             
-            if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, &buffer[0]) == -1) {
+            if (getStringInput((MAP_HEIGHT/2) + 1, 0, true, 100, &buffer[0]) == -1) {
                 return;
             }
 
@@ -1095,7 +1095,7 @@ void activateCombo(int comboIndex) {
 
 
 /* Misc Functions */
-int getStringInput(int y, int x, bool center, char* buffer) {
+int getStringInput(int y, int x, bool center, int maxBufferSize, char* buffer) {
     int input;
 
     buffer[0] = ' ';
@@ -1148,14 +1148,16 @@ int getStringInput(int y, int x, bool center, char* buffer) {
                 break;
             }
             default: {
-                for (int i = currentBufferSize; i > currentCharIndex; i--){
-                    buffer[i] = buffer[i - 1];
+                if (currentBufferSize < (maxBufferSize - 1)) {
+                    for (int i = currentBufferSize; i > currentCharIndex; i--){
+                        buffer[i] = buffer[i - 1];
+                    }
+
+                    buffer[currentCharIndex] = input;
+
+                    currentBufferSize++;
+                    currentCharIndex++;
                 }
-
-                buffer[currentCharIndex] = input;
-
-                currentBufferSize++;
-                currentCharIndex++;
                 break;
             }
         }

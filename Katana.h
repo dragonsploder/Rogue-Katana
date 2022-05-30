@@ -501,7 +501,7 @@ int checkForCombo();                                                 /* Checks i
 bool isViableCombo(struct Combo combo);                              /* Checks for combo conflict          */
 void activateCombo(int comboIndex);                                  /* Activate a combo                   */
 /*---- Misc Functions -------------------------------------------------------------------------------------*/
-int getStringInput(int y, int x, bool center, char* buffer);         /* Get string from player             */
+int getStringInput(int y, int x, bool center, int maxBufferSize, char* buffer); /* Get string from player  */
 bool doesEnemyMoveThisTurn(int enemy);                               /* Do speed calculations of an enemy  */
 bool checkForEnemy(struct Vec2 location);                            /* Check if an enemy is at location   */
 void replaceKatana(int slot, struct Katana katana);                  /* Replace katana with a new one      */
