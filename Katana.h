@@ -12,13 +12,14 @@
 
 
 
-/* Screen laylout def */
+/* Screen def */
 #define SCREEN_HEIGHT 24
 #define SCREEN_WIDTH  80
 
-
 #define MAP_HEIGHT    (SCREEN_HEIGHT/3 - 1)
 #define MAP_WIDTH     (SCREEN_WIDTH - 2)
+
+#define USE_COLOR true
 
 /* Controls */
 #define TOP_LEFT_KATANA                'u'
@@ -33,7 +34,7 @@
 
 #define BREAK_KATANA_KEY               'b'
 #define HELP_KEY                       'h'
-#define COMBO_REFERNCE_KEY             'c'
+#define COMBO_REFERENCE_KEY             'c'
 #define ENEMY_CHECK_KEY                ';'
 #define QUIT_KEY                       'Q'
 #define PLAYER_DATA_KEY                '@'
@@ -88,7 +89,8 @@
 #define ENEMY_RESISTANCE_PERCENT           0.7
 #define TERRAIN_SYNERGY_PERCENT            1.3
 
-#define MAX_NUMBER_OF_ENEMIES              25
+//#define MAX_NUMBER_OF_ENEMIES              25
+#define MAX_NUMBER_OF_ENEMIES              20
 #define ENEMY_LEVEL_CAP                    20
 
 #define MAX_NUMBER_OF_COMBOS               10
@@ -110,8 +112,10 @@
 
 #define ENEMY_SPEED_GEN                    (abs(dice(3, 4) - 6))
 #define ENEMY_LEVEL_GEN                    (dice(((int) currentGameData.turn/TURNS_UNTIL_DIFFICULTY_INCREASE) + 1, 4) + 1)
-#define ENEMY_MAX_HEALTH_GEN               ((myRand(currentEnemy->level) + 1) * 2)
-#define ENEMY_DAMAGE_GEN                   (currentEnemy->level / (myRand(3) + 1))
+//#define ENEMY_MAX_HEALTH_GEN               ((myRand(currentEnemy->level) + 1) * 2)
+#define ENEMY_MAX_HEALTH_GEN               ((int)((myRand(currentEnemy->level) + 4) * 1.5))
+//#define ENEMY_DAMAGE_GEN                   (currentEnemy->level / (myRand(3) + 1))
+#define ENEMY_DAMAGE_GEN                   ((int)(currentEnemy->level / (myRand(3) + 2)))
            
 #define KATANA_MAX_DAMAGE                  12
 #define KATANA_DAMAGE_GEN                  (dice(3, 4))
@@ -161,7 +165,7 @@ struct Katana {
     int type;                        /* Fire, Ice, etc                        */
     int damage;                      /* 1 - 12                                */
     int damageMod;                   /* 0 - 12                                */
-    int movementType;                /* Strike, Besserk, etc                  */
+    int movementType;                /* Strike, Berserk, etc                  */
     int sharpness;                   /* 100 - 25                              */
     int numberOfMoves;               /* Number movement uses with this katana */
     int numberOfStrikes;             /* Number of attacks with this katana    */
@@ -466,7 +470,7 @@ const char comboLocationToText[4] = {
     BOTTOM_RIGHT_KATANA
 };
 
-/*==== Forward Function Decleration =======================================================================*/
+/*==== Forward Function Declaration =======================================================================*/
 int main();                                                          /* Main function                      */
 void mainMenu();                                                     /* Handles main menu screen           */
 void gameLoop();                                                     /* Game loop which runs every turn    */
@@ -474,7 +478,7 @@ void gameLoop();                                                     /* Game loo
 double findDistance(struct Vec2 start, struct Vec2 end, bool pythagoras); /* Distance between two points   */
 int findClosestEnemy();                                              /* Return index of the closest enemy  */
 double findDistanceToClosestEnemy(struct Vec2 location, bool pythagoras); /* Distance to closest enemy     */
-struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse); /* Next step from start to end  */
+struct Vec2 pathfinding(struct Vec2 start, struct Vec2 end, bool inverse); /* Next step from start to end  */
 bool findNearbyEnemies(struct Vec2 loc, int (*enemies)[8], int *number); /* Find enemies adjacent to player*/
 /*---- Movement Functions ---------------------------------------------------------------------------------*/
 void playerMove(struct Katana katana);                               /* Moves the player                   */
@@ -513,13 +517,13 @@ int dice(int number, int sides);                                     /* DnD styl
 void printError(char* message, char* file, int line);                /* Error function used by ERROR()     */
 void pushPreviousMove(int type, int location, int movement);         /* Push values to previousMoves       */
 void formatBlock(char* oldString, char* newString, int lineLength);  /* Format string for several lines    */
-void sliceIncertString(char* expression, char* incert, int location, int replacmentLen); /* Insert string  */
+void sliceInsertString(char* expression, char* insert, int location, int replacementLen); /* Insert string */
 FILE* writeFile(char* filePath);                                     /* Create writable file stream        */
 FILE* readFile(char* filePath);                                      /* Open readable file stream          */
 void genRandomName(char name[20], bool isSurname, bool gender);      /* Gen a random name                  */
 /*---- Curses IO Functions --------------------------------------------------------------------------------*/
-void initCurses();                                                   /* Initalise Curses library           */
-void initColor();                                                    /* Initalise color for Curses         */
+void initCurses();                                                   /* Initialise Curses library          */
+void initColor();                                                    /* Initialise color for Curses        */
 void stopCurses();                                                   /* Stop Curses library                */
 int myGetch();                                                       /* Get keystroke                      */
 void clearScreen();                                                  /* Clear screen                       */ 
@@ -536,7 +540,7 @@ void printHelp();                                                    /* Print ou
 void printComboReference();                                          /* Print out known combos             */
 void printEnemyInfo();                                               /* Info of the closest enemy          */
 void printEntities();                                                /* Print player and enemies           */
-void printTilecard();                                                /* Print titlecard for main menu      */
+void printTileCard();                                                /* Print title card for main menu     */
 void printScoresFromScoresFile();                                    /* Print ordered list of scores       */
 void printDeathScreen();                                             /* Print death screen showing stats   */
 /*---- End of File ----------------------------------------------------------------------------------------*/

@@ -100,7 +100,7 @@ int main(){
 void mainMenu(){
     clearScreen();
     printBoarder(false);
-    printTilecard();
+    printTileCard();
 
     int choice = menu(menuOptions, NUMBER_OF_MENU_OPTIONS, NUMBER_OF_TITLE_CARD_LINES + 2, (SCREEN_WIDTH/2) - (strlen(menuOptions[0])/2));
 
@@ -206,7 +206,7 @@ void gameLoop() {
                 break;
             } 
 
-            case COMBO_REFERNCE_KEY: { /* Print combo screen */
+            case COMBO_REFERENCE_KEY: { /* Print combo screen */
                 infoKey = true;
                 break;
             }
@@ -310,7 +310,7 @@ void gameLoop() {
                 printKatanaDescription(currentGameData.player.katanas[selectedKatana], false);
             } else if (command == HELP_KEY) {
                 printHelp();
-            } else if (command == COMBO_REFERNCE_KEY) {
+            } else if (command == COMBO_REFERENCE_KEY) {
                 printComboReference();
             } else if (command == ENEMY_CHECK_KEY) {
                 printEnemyInfo();
@@ -357,7 +357,7 @@ void gameLoop() {
 
 /* Find functions */
 double findDistance(struct Vec2 start, struct Vec2 end, bool pythagoras) {
-    /* Pythagoras is only used in the player retreat movement code as it gives better results. Chebyshev distance used insted */
+    /* Pythagoras is only used in the player retreat movement code as it gives better results. Chebyshev distance used everywhere else */
     if (pythagoras) {
         return sqrt(pow(end.y - start.y, 2) + pow(end.x - start.x, 2));
     } else { 
@@ -389,7 +389,7 @@ double findDistanceToClosestEnemy(struct Vec2 location, bool pythagoras) {
     return closestEnemyDistance;
 }
 
-struct Vec2 pathFinding(struct Vec2 start, struct Vec2 end, bool inverse) {
+struct Vec2 pathfinding(struct Vec2 start, struct Vec2 end, bool inverse) {
     /* Extremely simple pathfinding */
     struct Vec2 step = start;
 
@@ -444,7 +444,7 @@ void playerMove(struct Katana katana) {
                     strongestEnemy = i;
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[strongestEnemy].location, false);
+            newLocation = pathfinding(currentGameData.player.location, currentGameData.enemies[strongestEnemy].location, false);
             break;
         }
 
@@ -462,7 +462,7 @@ void playerMove(struct Katana katana) {
                     closestEnemyDistance = currentEnemyDistance;
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, currentGameData.enemies[closestEnemy].location, false);
+            newLocation = pathfinding(currentGameData.player.location, currentGameData.enemies[closestEnemy].location, false);
             break;
         }
         
@@ -511,7 +511,7 @@ void playerMove(struct Katana katana) {
             } while ((newLocation.y < 0 || newLocation.y >= MAP_HEIGHT) || (newLocation.x < 0 || newLocation.x >= MAP_WIDTH));
             
             /* If moving would not lead to farther distances, move to tile touching least enemies */
-            /* It's just the same algorithem again, sorry */
+            /* It's just the same algorithm again, sorry */
             if (farthestDistanceIndex == 4) {
                 int numberOfEnemies[9];
                 int nearByEnemies[8];
@@ -572,7 +572,7 @@ void playerMove(struct Katana katana) {
                     }
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, closestTerrain, false);
+            newLocation = pathfinding(currentGameData.player.location, closestTerrain, false);
             break;
         }
         
@@ -599,7 +599,7 @@ void playerMove(struct Katana katana) {
                     }
                 }
             }
-            newLocation = pathFinding(currentGameData.player.location, closestFallenKatana, false);
+            newLocation = pathfinding(currentGameData.player.location, closestFallenKatana, false);
             break;
         }
         
@@ -628,9 +628,9 @@ void enemyMovement(int enemyIndex) {
     struct Vec2 newLocation;
 
     if (CHECK_BIT(currentGameData.comboFlags, COMBO_FLAG_SCARE_ENEMIES)) {
-        newLocation = pathFinding(currentEnemy->location, currentGameData.player.location, true);
+        newLocation = pathfinding(currentEnemy->location, currentGameData.player.location, true);
     } else {
-        newLocation = pathFinding(currentEnemy->location, currentGameData.player.location, false);
+        newLocation = pathfinding(currentEnemy->location, currentGameData.player.location, false);
     }
 
     if (checkForEnemy(newLocation) == false && ((newLocation.y >= 0 && newLocation.y <= MAP_HEIGHT) && (newLocation.x >= 0 && newLocation.x <= MAP_WIDTH))) {
@@ -792,7 +792,7 @@ void genKatana(struct Katana* katana, int setMovementType) {
 }
 
 void genFallenKatana() {
-    if (currentGameData.currentNumberOfFallenKatanas > MAX_NUMBER_OF_FALLEN_KATANAS) {
+    if (currentGameData.currentNumberOfFallenKatanas >= MAX_NUMBER_OF_FALLEN_KATANAS) {
         return;
     }
 
@@ -1467,12 +1467,12 @@ void pushPreviousMove(int type, int location, int movement) {
     currentGameData.previousMoves[0][2] = movement;
 }
 
-void sliceIncertString(char* expression, char* incert, int location, int replacmentLen){
+void sliceInsertString(char* expression, char* insert, int location, int replacementLen){
     char* oldExpression = (char*) malloc(strlen(expression) * sizeof(char) * 2);
     strcpy(oldExpression, expression);
     expression[location] = '\0';
-    strcat(expression, incert);
-    strcat(expression, &oldExpression[location + replacmentLen]);
+    strcat(expression, insert);
+    strcat(expression, &oldExpression[location + replacementLen]);
 }
 
 void formatBlock(char* oldString, char* newString, int lineLength) {
@@ -1492,7 +1492,7 @@ void formatBlock(char* oldString, char* newString, int lineLength) {
                     temp--;
                 }
                 for (int j = temp; j < i; j++){
-                    sliceIncertString(newString, " ", j, 0);
+                    sliceInsertString(newString, " ", j, 0);
                 }
                 offset += (i - temp);
             }
@@ -1539,7 +1539,9 @@ void initCurses(){
     /* Hide cursor */
     curs_set(0);
 
-    initColor();
+    #if USE_COLOR
+        initColor();
+    #endif
 }
 
 void stopCurses(){
@@ -1574,19 +1576,19 @@ void printBox(int y, int x, int stopY, int stopX, char* toPrint){
 }
 
 void update(char* message, bool pause){
-    char* formatedMessage = (char *) malloc(strlen(message) * sizeof(char) * 2);
+    char* formattedMessage = (char *) malloc(strlen(message) * sizeof(char) * 2);
 
     int messageLineLength = SCREEN_WIDTH - 18;
 
-    formatBlock(message, formatedMessage, messageLineLength);
+    formatBlock(message, formattedMessage, messageLineLength);
 
     char mainBuffer[SCREEN_WIDTH - 2];
     char secondaryBuffer[messageLineLength + 1];
 
-    int linesNeeded = (int) (strlen(formatedMessage) / (messageLineLength)) + 1;
+    int linesNeeded = (int) (strlen(formattedMessage) / (messageLineLength)) + 1;
 
     for (int i = 0; i < linesNeeded; i++) {
-        strncpy(secondaryBuffer, &formatedMessage[i * messageLineLength], messageLineLength);
+        strncpy(secondaryBuffer, &formattedMessage[i * messageLineLength], messageLineLength);
         secondaryBuffer[messageLineLength] = '\0';
         if (i != linesNeeded - 1) {
             sprintf(mainBuffer, "%s -cont- (exit)", secondaryBuffer);
@@ -1605,7 +1607,7 @@ void update(char* message, bool pause){
         }
     }
 
-    free(formatedMessage);
+    free(formattedMessage);
 
     if (pause) {
         printBoarder(true);
@@ -1723,7 +1725,7 @@ void printKatana(struct Katana katana, int position) {
 
     mvprintw(topLeftCorner.y + 1, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(katana.name)/2), katana.name);
     
-    sprintf(buffer,"Dammage: %i", katana.damage);
+    sprintf(buffer,"Damage: %i", katana.damage);
     mvprintw(topLeftCorner.y + 3, (topLeftCorner.x + (katanaInfoBoxWidth/2)) - (strlen(buffer)/2), buffer);
 
     if (katana.damageMod != 0) {
@@ -1900,11 +1902,11 @@ void printEntities() {
     attrset(A_NORMAL);
 }
 
-void printTilecard(){
+void printTileCard(){
     int start = (SCREEN_WIDTH/2) - (strlen(titleCard[0])/2);
 
-    attrset(COLOR_PAIR(COLOR_WHITE));
     for (int i = 0; i < NUMBER_OF_TITLE_CARD_LINES; i++) {
+        attrset(COLOR_PAIR(myRand(7)));
         mvprintw(1 + i, start, "%s", titleCard[i]);
     }
 }
@@ -1966,7 +1968,7 @@ void printDeathScreen() {
     mvprintw(2, (SCREEN_WIDTH/2) - 3, "Death");
 
     char buffer[500];
-    sprintf(buffer, "%s died on turn %i on wave %i after scoreing %i points. They were holding a %s, %s, %s, and %s. They attacked a total of %i times and killed a total of %i enemies. They moved %i times. They picked up %i katana%sand broke %i of them. They discoved %i out of %i combos. May they rest in piece.",
+    sprintf(buffer, "%s died on turn %i on wave %i after scoring %i points. They were holding a %s, %s, %s, and %s. They attacked a total of %i times and killed a total of %i enemies. They moved %i times. They picked up %i katana%sand broke %i of them. They discoverd %i out of %i combos. May they rest in piece.",
                     currentGameData.player.name, 
                     currentGameData.turn, 
                     currentGameData.currentNumberOfWaves, 
@@ -1984,17 +1986,17 @@ void printDeathScreen() {
                     currentGameData.currentNumberOfDiscoveredCombos - 1,
                     currentGameData.numberOfCombos - 1);
 
-    char formatedBuffer[500];
+    char formattedBuffer[500];
 
-    formatBlock(&buffer[0], &formatedBuffer[0], SCREEN_WIDTH - 2);
+    formatBlock(&buffer[0], &formattedBuffer[0], SCREEN_WIDTH - 2);
 
     for (int i = 0; i < SCREEN_HEIGHT - 4; i++) {
         for (int j = 0; j < (SCREEN_WIDTH - 2); j++) {
-            if (formatedBuffer[(i * (SCREEN_WIDTH - 2)) + j] == 0) {
+            if (formattedBuffer[(i * (SCREEN_WIDTH - 2)) + j] == 0) {
                 getch();
                 return;
             }
-            mvprintw(i + 4, j + 1 , "%c", formatedBuffer[(i * (SCREEN_WIDTH - 2)) + j]);
+            mvprintw(i + 4, j + 1 , "%c", formattedBuffer[(i * (SCREEN_WIDTH - 2)) + j]);
         }
     }
 }
